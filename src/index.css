@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/* Theme transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light theme (default) */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #DB4444;
+  --border-color: #e5e7eb;
+}
+
+/* Dark theme */
+:root[data-theme='dark'] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --accent-color: #DB4444;
+  --border-color: #404040;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Theme switch button styles */
+.theme-switch {
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 9999px;
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-primary);
+}
+
+.theme-switch:hover {
+  background-color: var(--border-color);
+}
+
+.theme-switch svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Dark-mode overrides for Tailwind utility classes and common elements
+   These ensure components that use utility classes like `bg-white` or
+   `text-black` become readable when the app is in dark mode. */
+:root[data-theme='dark'] .bg-white,
+:root[data-theme='dark'] .bg-gray-50,
+:root[data-theme='dark'] .bg-gray-100,
+:root[data-theme='dark'] .bg-gray-200 {
+  background-color: var(--bg-primary) !important;
+}
+
+:root[data-theme='dark'] .text-black,
+:root[data-theme='dark'] .text-gray-900,
+:root[data-theme='dark'] .text-gray-800 {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme='dark'] .border-gray-200,
+:root[data-theme='dark'] .border-gray-300,
+:root[data-theme='dark'] .border-gray-400,
+:root[data-theme='dark'] .border-gray-700 {
+  border-color: var(--border-color) !important;
+}
+
+/* Inputs, textareas, search boxes */
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] select {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Buttons that use text-black */
+:root[data-theme='dark'] .text-black > *,
+:root[data-theme='dark'] .text-black {
+  color: var(--text-primary) !important;
+}
+
+/* Specific: override Home wrapper if it forces white */
+:root[data-theme='dark'] .bg-white.bg-white {
+  background-color: var(--bg-primary) !important;
+}
+
+/* Ensure links and headings are visible */
+:root[data-theme='dark'] a,
+:root[data-theme='dark'] h1,
+:root[data-theme='dark'] h2,
+:root[data-theme='dark'] h3,
+:root[data-theme='dark'] h4,
+:root[data-theme='dark'] p,
+:root[data-theme='dark'] span {
+  color: var(--text-primary) !important;
+}
+/* Swiper pagination dots ko niche shift karne ke liye */
+.swiper-pagination {
+  position: relative !important;
+  margin-top: 20px;  /* dots aur cards ke beech gap */
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  } 
+}
+
+.animate-slide-down {
+  animation: slideDown 0.4s ease-out;
+}

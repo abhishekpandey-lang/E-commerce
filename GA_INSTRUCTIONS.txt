@@ -1,0 +1,23 @@
+Google Analytics (GA4) integration added.
+
+What I changed:
+- src/analytics/ga4.js  : wrapper to initialize and send pageviews/events using react-ga4
+- src/analytics/GAListener.jsx : automatically sends pageview on route change
+- src/main.jsx : calls initGA(...) at startup. Replace the placeholder measurement ID.
+- src/App.jsx : imports GAListener and trackEvent (example). Add trackEvent calls or use data attributes.
+
+Next steps (locally):
+1. Install dependency:
+   npm install react-ga4
+
+2. Set your GA measurement ID:
+   - Create a .env file in the project root with:
+     REACT_APP_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+   - Replace G-XXXXXXXXXX with your actual GA4 measurement ID.
+
+3. Track button clicks:
+   - Option A: add onClick={() => trackEvent({category: 'Button', action: 'click', label: 'Checkout'})}
+   - Option B: add a data-ga-label attribute to elements and implement a global listener if desired.
+
+Notes:
+- I could not run npm install here. This ZIP contains code edits only.
