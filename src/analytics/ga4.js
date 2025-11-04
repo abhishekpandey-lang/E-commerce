@@ -1,20 +1,20 @@
-// Simple wrapper for react-ga4 usage (you still need to install react-ga4)
 import ReactGA from "react-ga4";
 
 export function initGA(measurementId) {
   if (!measurementId) {
-    console.warn("GA measurement ID not provided. Set REACT_APP_GA_MEASUREMENT_ID or replace the placeholder.");
+    console.warn("⚠️ GA measurement ID not provided.");
     return;
   }
+
   ReactGA.initialize(measurementId);
+  ReactGA.send({ hitType: "pageview", page: window.location.pathname });
+  console.log("✅ Google Analytics initialized:", measurementId);
 }
 
 export function trackPage(path) {
-  if (!ReactGA.ga) return;
   ReactGA.send({ hitType: "pageview", page: path });
 }
 
 export function trackEvent({ category = "UX", action, label, value }) {
-  if (!ReactGA.ga) return;
   ReactGA.event({ category, action, label, value });
 }
