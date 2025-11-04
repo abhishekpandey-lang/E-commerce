@@ -46,12 +46,12 @@ function Footer() {
         </div>
 
         {/* Quick Links */}
-        <div>
+         <div>
           <h3 className="text-lg font-semibold text-white mb-3">Quick Links</h3>
           <ul className="space-y-2">
-            <li><a href="/" onClick={() => trackClick("Home")} className="hover:text-red-500 transition">Home</a></li>
-            <li><a href="/about" onClick={() => trackClick("About Us")} className="hover:text-red-500 transition">About Us</a></li>
-            <li><a href="/contact" onClick={() => trackClick("Contact")} className="hover:text-red-500 transition">Contact</a></li>
+            <li><Link to="/" onClick={() => trackClick("Home")} className="hover:text-red-500 transition">Home</Link></li>
+            <li><Link to="/about" onClick={() => trackClick("About Us")} className="hover:text-red-500 transition">About Us</Link></li>
+            <li><Link to="/contact" onClick={() => trackClick("Contact")} className="hover:text-red-500 transition">Contact</Link></li>
           </ul>
         </div>
 
