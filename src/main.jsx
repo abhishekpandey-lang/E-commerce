@@ -11,8 +11,8 @@ import { initGA } from "./analytics/ga4";
 import App from "./App.jsx";
 import { WishlistProvider } from "./context/WishlistContext.jsx";
 
-// ✅ Directly using your GA Measurement ID (no need of .env for now)
-const GA_MEASUREMENT_ID = "G-59ZM1REN41";
+// 🧩 Vite में process.env नहीं चलता, इसलिए import.meta.env का use करो
+const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || "G-XXXXXXXXXX";
 
 // Google Analytics initialize
 initGA(GA_MEASUREMENT_ID);
@@ -32,6 +32,5 @@ createRoot(document.getElementById("root")).render(
     </Provider>
   </StrictMode>
 );
-
-// 🌐 Deployment URL
-// https://e-commerce-two-beta-61.vercel.app
+/////https://e-commerce-two-beta-61.vercel.app//
+///VITE_GA_MEASUREMENT_ID=G-59ZM1REN41
