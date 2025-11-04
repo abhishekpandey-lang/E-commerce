@@ -33,3 +33,4 @@ createRoot(document.getElementById("root")).render(
   </StrictMode>
 );
 /////https://e-commerce-two-beta-61.vercel.app//
+///VITE_GA_MEASUREMENT_ID=G-59ZM1REN41
