@@ -1,18 +1,17 @@
 import { useEffect } from "react";
 import { useCart } from "../context/CartContext";
-import { useWishlist } from "../context/WishlistContext"; 
+import { useWishlist } from "../context/WishlistContext";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";  
-import { FiHeart } from "react-icons/fi";  
-import { FaHeart } from "react-icons/fa"; // ❤️ filled icon
+import { useAuth } from "../context/AuthContext";
+import { FiHeart } from "react-icons/fi";
+import { FaHeart } from "react-icons/fa";
 
 function ProductCard({ product, onAddToCart }) {
   const { cart, addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
-  const { user } = useAuth();   
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Check if product is in cart or wishlist
   const inCart = cart.some((item) => item.id === product.id || item._id === product._id);
   const isLiked = wishlist.some((item) => item.id === product.id || item._id === product._id);
 
@@ -25,17 +24,18 @@ function ProductCard({ product, onAddToCart }) {
     addToCart(product);
     onAddToCart?.(product);
 
-    // 🎯 Google Analytics event
+    // 🎯 Google Analytics: Add to Cart
     if (typeof gtag !== "undefined") {
       gtag("event", "add_to_cart", {
         event_category: "Cart",
         event_label: product.name,
         value: product.price,
+        product_id: product.id || product._id,
       });
     }
   };
 
-  // ❤️ Wishlist toggle
+  // ❤️ Wishlist Toggle
   const handleWishlist = () => {
     if (!user) {
       navigate("/signup");
@@ -48,29 +48,31 @@ function ProductCard({ product, onAddToCart }) {
       addToWishlist(product);
     }
 
-    // 🎯 Google Analytics event
+    // 🎯 GA: Wishlist event
     if (typeof gtag !== "undefined") {
       gtag("event", isLiked ? "remove_from_wishlist" : "add_to_wishlist", {
         event_category: "Wishlist",
         event_label: product.name,
+        product_id: product.id || product._id,
       });
     }
   };
 
-  // 👉 Navigate to product detail page
+  // 👉 Product Detail Navigation
   const goToDetail = () => {
     navigate(`/product/${product.id || product._id}`, { state: { product } });
 
-    // 🎯 GA: Product viewed
+    // 🎯 GA: Product Click
     if (typeof gtag !== "undefined") {
-      gtag("event", "view_product", {
+      gtag("event", "product_click", {
         event_category: "Product",
         event_label: product.name,
+        value: product.price,
+        product_id: product.id || product._id,
       });
     }
   };
 
-  // 🔹 Default values (safety)
   const price = product.price ?? 0;
   const oldPrice = product.oldPrice ?? price + 50;
   const discount = product.discount ?? 0;
@@ -123,9 +125,7 @@ function ProductCard({ product, onAddToCart }) {
       </div>
 
       {/* 📉 Discount */}
-      {discount > 0 && (
-        <span className="text-green-600 text-sm">-{discount}% Off</span>
-      )}
+      {discount > 0 && <span className="text-green-600 text-sm">-{discount}% Off</span>}
 
       {/* 🛒 Add to Cart / Go to Cart */}
       {inCart ? (

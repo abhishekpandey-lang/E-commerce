@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 
-// 👇 Google Analytics ka helper (agar gtag already index.html me setup hai)
+// ✅ Centralized Google Analytics Event Tracker
 const trackEvent = (action, category, label) => {
-  if (window.gtag) {
+  if (typeof window !== "undefined" && window.gtag) {
     window.gtag("event", action, {
       event_category: category,
       event_label: label,
     });
   } else {
-    console.log("Tracking:", action, category, label); // fallback for dev
+    console.log("GA Tracking (dev):", action, category, label);
   }
 };
 
@@ -39,6 +39,11 @@ function MusicBanner() {
           hours = 23;
           minutes = 59;
           seconds = 59;
+        } else {
+          // 🔹 Countdown finished → Track event once
+          clearInterval(timer);
+          trackEvent("countdown_end", "Music Banner", "Countdown finished");
+          return prev;
         }
 
         return { days, hours, minutes, seconds };
@@ -50,14 +55,14 @@ function MusicBanner() {
 
   const format = (num) => String(num).padStart(2, "0");
 
-  // 👇 Button click handler
+  // 🔹 "Buy Now" button click tracker
   const handleBuyNowClick = () => {
     trackEvent("buy_now_click", "Music Banner", "User clicked Buy Now button");
   };
 
   return (
     <div className="bg-black text-white rounded-2xl flex flex-col lg:flex-row justify-between items-center px-6 sm:px-8 lg:px-12 py-10 lg:py-12 mt-10 gap-8 lg:mr-8">
-      {/* Left Side Text */}
+      {/* Left Section */}
       <div className="text-center lg:text-left">
         <span className="text-green-400 font-semibold text-sm sm:text-base">
           Categories
@@ -66,18 +71,19 @@ function MusicBanner() {
           Enhance Your <br className="hidden sm:block" /> Music Experience
         </h2>
 
+        {/* Countdown Timer */}
         <div className="flex gap-3 mt-4 justify-center lg:justify-start">
-          {[format(time.days), format(time.hours), format(time.minutes), format(time.seconds)].map((t, i) => (
+          {[time.days, time.hours, time.minutes, time.seconds].map((t, i) => (
             <div
               key={i}
               className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-white text-black rounded-full font-bold text-sm sm:text-base"
             >
-              {t}
+              {format(t)}
             </div>
           ))}
         </div>
 
-        {/* 👇 Tracking event added here */}
+        {/* Buy Now Button */}
         <button
           onClick={handleBuyNowClick}
           className="mt-6 px-5 sm:px-6 py-2 sm:py-3 bg-green-500 text-black rounded-lg hover:bg-green-600 transition"
@@ -86,10 +92,11 @@ function MusicBanner() {
         </button>
       </div>
 
+      {/* Right Section (Product Image) */}
       <div className="flex justify-center lg:justify-end">
         <img
           src="/JBL_BOOMBOX_2_FRONT_004 MAIN_x2.webp"
-          alt="Speaker"
+          alt="JBL Speaker"
           className="w-56 sm:w-72 lg:w-80 object-contain lg:-ml-6"
         />
       </div>

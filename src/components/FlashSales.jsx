@@ -45,49 +45,78 @@ function FlashSale() {
   // 🧩 Wishlist Toggle
   const handleWishlistToggle = (product) => {
     const isInWishlist = wishlist.some(p => (p.id || p._id) === (product.id || product._id));
+
     if (isInWishlist) {
       removeFromWishlist(product.id || product._id);
       setNotification(`${product.name} removed from wishlist ❌`);
-      // 📊 Track remove from wishlist
+
+      // 📊 GA4 Event: Remove from Wishlist
       if (window.gtag) {
         window.gtag("event", "remove_from_wishlist", {
-          event_category: "Wishlist",
-          event_label: product.name,
+          currency: "USD",
           value: product.price,
+          items: [
+            {
+              item_name: product.name,
+              item_id: product.id || product._id,
+              price: product.price,
+              discount: product.discount || 0,
+              item_category: product.section || "FlashSales",
+            },
+          ],
         });
       }
     } else {
       addToWishlist(product);
       setNotification(`${product.name} added to wishlist ❤️`);
-      // 📊 Track add to wishlist
+
+      // 📊 GA4 Event: Add to Wishlist
       if (window.gtag) {
         window.gtag("event", "add_to_wishlist", {
-          event_category: "Wishlist",
-          event_label: product.name,
+          currency: "USD",
           value: product.price,
+          items: [
+            {
+              item_name: product.name,
+              item_id: product.id || product._id,
+              price: product.price,
+              discount: product.discount || 0,
+              item_category: product.section || "FlashSales",
+            },
+          ],
         });
       }
     }
+
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // 🧩 Add to Cart
+  // 🧩 Add to Cart (GA4 format)
   const handleAddToCart = (product) => {
     addToCart(product);
     setNotification(`${product.name} added to cart ✅`);
 
-    // 📊 Google Analytics: Add to Cart tracking
+    // 📊 GA4 Enhanced Ecommerce: Add to Cart
     if (window.gtag) {
       window.gtag("event", "add_to_cart", {
-        event_category: "Cart",
-        event_label: product.name,
+        currency: "USD",
         value: product.price,
+        items: [
+          {
+            item_name: product.name,
+            item_id: product.id || product._id,
+            price: product.price,
+            discount: product.discount || 0,
+            item_category: product.section || "FlashSales",
+          },
+        ],
       });
     }
 
     setTimeout(() => setNotification(null), 2000);
   };
 
+  // ⏰ Timer setup
   const handleNext = () => {
     if (startIndex + visibleCount < products.length) setStartIndex(startIndex + visibleCount);
   };

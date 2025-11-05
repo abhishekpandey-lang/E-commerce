@@ -9,7 +9,7 @@ export function WishlistProvider({ children }) {
   const { user } = useAuth();
   const [wishlist, setWishlist] = useState([]);
 
-  // 🔄 Load wishlist from backend or fallback
+  // 🔄 Load wishlist from backend or localStorage fallback
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!user) return setWishlist([]);
@@ -30,24 +30,24 @@ export function WishlistProvider({ children }) {
     fetchWishlist();
   }, [user]);
 
-  // 🧠 Auto-save wishlist to backend + localStorage
+  // 🧠 Auto-save wishlist to backend + localStorage (debounced)
   useEffect(() => {
     if (!user) return;
 
     localStorage.setItem(`wishlist_${user.uid || user.email}`, JSON.stringify(wishlist));
 
-    const syncToBackend = async () => {
+    const timeout = setTimeout(async () => {
       try {
         await axios.post(`${BASE_URL}/api/wishlist/${user.uid || user.email}`, { wishlist });
       } catch (err) {
         console.error("❌ Wishlist sync failed:", err);
       }
-    };
+    }, 1000); // debounce 1 second
 
-    syncToBackend();
+    return () => clearTimeout(timeout);
   }, [wishlist, user]);
 
-  // ❤️ Add product
+  // ❤️ Add product to wishlist
   const addToWishlist = (product) => {
     setWishlist((prev) => {
       const alreadyExists = prev.find(
@@ -55,12 +55,19 @@ export function WishlistProvider({ children }) {
       );
       if (alreadyExists) return prev;
 
-      // 🎯 Google Analytics tracking
-      if (typeof gtag !== "undefined") {
-        gtag("event", "add_to_wishlist", {
+      // 🎯 Google Analytics event
+      if (window.gtag) {
+        window.gtag("event", "add_to_wishlist", {
           event_category: "Wishlist",
           event_label: product.name,
           value: product.price || 0,
+          items: [
+            {
+              id: product.id || product._id,
+              name: product.name,
+              price: product.price || 0,
+            },
+          ],
         });
       }
 
@@ -68,18 +75,19 @@ export function WishlistProvider({ children }) {
     });
   };
 
-  // ❌ Remove product
+  // ❌ Remove product from wishlist
   const removeFromWishlist = (productId) => {
     setWishlist((prev) => {
       const updated = prev.filter(
         (item) => (item.id || item._id) !== productId
       );
 
-      // 🎯 Google Analytics tracking
-      if (typeof gtag !== "undefined") {
-        gtag("event", "remove_from_wishlist", {
+      // 🎯 Google Analytics event
+      if (window.gtag) {
+        window.gtag("event", "remove_from_wishlist", {
           event_category: "Wishlist",
           event_label: productId,
+          items: [{ id: productId }],
         });
       }
 

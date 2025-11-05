@@ -4,24 +4,32 @@ function Notification({ message, onClose }) {
   useEffect(() => {
     if (!message) return;
 
-    // 🔹 Google Analytics event: Notification दिखा
+    const notificationId = Date.now().toString(); // 🔹 unique ID
+
+    // 🎯 Google Analytics: Notification Shown
     if (typeof gtag !== "undefined") {
-      gtag("event", "notification_viewed", {
+      gtag("event", "notification_shown", {
         event_category: "User Interaction",
         event_label: message,
+        notification_id: notificationId,
       });
+    } else {
+      console.log("GA: notification_shown →", message);
     }
 
-    // 🔹 Auto close after 900ms
+    // 🔹 Auto-close after 900ms
     const timer = setTimeout(() => {
       onClose();
 
-      // 🔹 Google Analytics event: Notification बंद हुआ
+      // 🎯 GA: Auto Closed
       if (typeof gtag !== "undefined") {
-        gtag("event", "notification_closed", {
+        gtag("event", "notification_closed_auto", {
           event_category: "User Interaction",
           event_label: message,
+          notification_id: notificationId,
         });
+      } else {
+        console.log("GA: notification_closed_auto →", message);
       }
     }, 900);
 
@@ -42,12 +50,15 @@ function Notification({ message, onClose }) {
         <button
           onClick={() => {
             onClose();
-            // 🔹 GA event: manually closed
+
+            // 🎯 GA: Manually Closed
             if (typeof gtag !== "undefined") {
               gtag("event", "notification_closed_manual", {
                 event_category: "User Interaction",
                 event_label: message,
               });
+            } else {
+              console.log("GA: notification_closed_manual →", message);
             }
           }}
           className="ml-2 font-bold hover:text-gray-300 text-lg"

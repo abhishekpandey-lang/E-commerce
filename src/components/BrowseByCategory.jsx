@@ -11,14 +11,30 @@ function BrowseByCategory() {
     { name: "Gaming", icon: "🎮" },
   ];
 
-  // 🔹 ye function event ko track karega
-  const handleCategoryClick = (catName) => {
+  // 🔹 Event tracker for category click
+  const handleCategoryClick = (categoryName) => {
+    // Google Analytics event send
     ReactGA.event({
-      category: "Category",
-      action: "Clicked Category",
-      label: catName,
+      category: "Category Interaction",
+      action: "Category Clicked",
+      label: categoryName,
     });
-    console.log(`Tracked click on category: ${catName}`);
+
+    // Fallback for dev environment
+    console.log(`📊 Category Clicked: ${categoryName}`);
+
+    // Optional: future Add to Cart tracking example
+    // trackAddToCart(categoryName);
+  };
+
+  // 🔹 Example function (future use)
+  const trackAddToCart = (productName) => {
+    ReactGA.event({
+      category: "Ecommerce",
+      action: "Add to Cart",
+      label: productName,
+    });
+    console.log(`🛒 Product added to cart: ${productName}`);
   };
 
   return (
@@ -41,13 +57,13 @@ function BrowseByCategory() {
         </div>
       </div>
 
-      {/* 🔹 Click par tracking karega */}
+      {/* 🔹 Category grid with click tracking */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
         {categories.map((cat, i) => (
           <div
             key={i}
             onClick={() => handleCategoryClick(cat.name)}
-            className="border-gray-300 rounded-lg flex flex-col items-center justify-center border rounded-lg py-6 cursor-pointer hover:bg-[#DB4444] hover:text-white transition"
+            className="border-gray-300 rounded-lg flex flex-col items-center justify-center border py-6 cursor-pointer hover:bg-[#DB4444] hover:text-white transition"
           >
             <span className="text-2xl sm:text-3xl">{cat.icon}</span>
             <p className="mt-2 text-sm sm:text-base font-medium">{cat.name}</p>

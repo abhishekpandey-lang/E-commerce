@@ -13,6 +13,8 @@ function ProductDetail() {
 
   // 🔹 Fetch product if not available from state
   useEffect(() => {
+    window.scrollTo(0, 0); // UX improvement
+
     if (!product) {
       fetch(`http://localhost:5000/api/products/${id}`)
         .then((res) => {
@@ -23,27 +25,43 @@ function ProductDetail() {
           setProduct(data);
           setLoading(false);
 
-          // 🎯 Track product view (Google Analytics)
-          if (typeof gtag !== "undefined") {
-            gtag("event", "view_product", {
+          // 🎯 GA: Product View
+          if (window.gtag) {
+            window.gtag("event", "view_item", {
               event_category: "Product Detail",
               event_label: data.name,
               value: data.price,
+              items: [
+                {
+                  id: data._id || id,
+                  name: data.name,
+                  category: data.category || "Uncategorized",
+                  price: data.price,
+                },
+              ],
             });
           }
         })
         .catch((err) => {
-          console.error(err);
+          console.error("❌ Product fetch failed:", err);
           setError(true);
           setLoading(false);
         });
     } else {
-      // 🎯 Track view for product from state
-      if (typeof gtag !== "undefined") {
-        gtag("event", "view_product", {
+      // 🎯 GA: Product View (from state)
+      if (window.gtag) {
+        window.gtag("event", "view_item", {
           event_category: "Product Detail",
           event_label: product.name,
           value: product.price,
+          items: [
+            {
+              id: product._id || id,
+              name: product.name,
+              category: product.category || "Uncategorized",
+              price: product.price,
+            },
+          ],
         });
       }
     }
@@ -51,12 +69,23 @@ function ProductDetail() {
 
   // 🛒 Handle Buy Now click
   const handleBuyNow = () => {
-    // 🎯 GA event for Buy Now
-    if (typeof gtag !== "undefined") {
-      gtag("event", "buy_now_click", {
+    if (!product) return;
+
+    // 🎯 GA: Buy Now Click
+    if (window.gtag) {
+      window.gtag("event", "begin_checkout", {
         event_category: "Checkout",
         event_label: product.name,
         value: product.price,
+        items: [
+          {
+            id: product._id || id,
+            name: product.name,
+            category: product.category || "Uncategorized",
+            price: product.price,
+            quantity: 1,
+          },
+        ],
       });
     }
 
@@ -80,10 +109,10 @@ function ProductDetail() {
       <>
         <Navbar />
         <div className="p-10 text-center min-h-screen">
-          <h2 className="text-xl">Product not found</h2>
+          <h2 className="text-xl text-red-500">Product not found</h2>
           <button
             onClick={() => navigate(-1)}
-            className="mt-4 px-4 py-2 bg-gray-200 rounded"
+            className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
           >
             Go Back
           </button>
@@ -98,12 +127,12 @@ function ProductDetail() {
   const oldPrice = product.oldPrice ?? price + 50;
   const rating = product.rating ?? 0;
   const reviews = product.reviews ?? 0;
-  const img = product.img ?? "/fallback-image.webp";
+  const img = product.img || "/fallback-image.webp";
 
   return (
     <>
       <Navbar />
-      <div className="p-6 md:p-12 min-h-screen">
+      <div className="p-6 md:p-12 min-h-screen bg-gray-50">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* 🖼 Product Image */}
           <div className="flex flex-col items-center">
@@ -111,6 +140,7 @@ function ProductDetail() {
               src={img}
               alt={product.name}
               className="w-80 object-contain rounded-lg shadow-md"
+              onError={(e) => (e.target.src = "/fallback-image.webp")}
             />
           </div>
 
@@ -149,7 +179,7 @@ function ProductDetail() {
             </div>
 
             {/* 🚚 Delivery info */}
-            <div className="mt-6 border p-4 rounded-lg">
+            <div className="mt-6 border p-4 rounded-lg bg-white">
               <p>🚚 Free Delivery</p>
               <p className="mt-2">↩️ 30 Days Return Delivery</p>
             </div>

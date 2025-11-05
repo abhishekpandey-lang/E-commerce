@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ReactGA from "react-ga4"; // ✅ Added for tracking
 
 function Profile() {
   const navigate = useNavigate();
@@ -19,8 +20,10 @@ function Profile() {
     confirmPassword: "",
   });
 
-  // अगर user login नहीं है तो redirect
+  // ✅ Page view track + user redirect logic
   useEffect(() => {
+    ReactGA.send({ hitType: "pageview", page: "/profile" });
+
     if (!storedUser) {
       navigate("/login");
     } else {
@@ -36,10 +39,17 @@ function Profile() {
     }
   }, [navigate]);
 
-  // Handle change
+  // Handle change (Track input edits)
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // ✅ GA4 tracking for input edits
+    ReactGA.event({
+      category: "Profile Interaction",
+      action: "Edited Field",
+      label: name,
+    });
   };
 
   // Save changes
@@ -62,6 +72,22 @@ function Profile() {
 
     localStorage.setItem("user", JSON.stringify(updatedUser));
     alert("✅ Profile updated successfully!");
+
+    // ✅ Track save event
+    ReactGA.event({
+      category: "Profile Interaction",
+      action: "Saved Profile Changes",
+      label: `${formData.firstName} ${formData.lastName}`,
+    });
+  };
+
+  // Cancel button handler (Track cancel event)
+  const handleCancel = () => {
+    ReactGA.event({
+      category: "Profile Interaction",
+      action: "Cancelled Edit",
+    });
+    navigate("/");
   };
 
   return (
@@ -178,7 +204,7 @@ function Profile() {
             {/* Buttons */}
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => navigate("/")}
+                onClick={handleCancel}
                 className="px-6 py-2 border border-gray-400 rounded"
               >
                 Cancel

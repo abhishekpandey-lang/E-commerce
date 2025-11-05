@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import axios from "axios";
+import { trackEvent } from "../analytics/ga4"; // ✅ Added for GA event tracking
 
 const CartContext = createContext();
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -45,7 +46,7 @@ export function CartProvider({ children }) {
     const map = new Map();
 
     [...backendCart, ...localCart].forEach(item => {
-      const id = item._id || item.id || item.name; // fallback
+      const id = item._id || item.id || item.name;
       if (!id) return;
       if (map.has(id)) {
         const existing = map.get(id);
@@ -67,7 +68,6 @@ export function CartProvider({ children }) {
 
   // 🛒 Add to cart
   const addToCart = async (product) => {
-    // हर product को unique id दो
     const uniqueId = product._id || product.id || Date.now().toString();
     const productWithId = { ...product, _id: uniqueId };
 
@@ -83,14 +83,13 @@ export function CartProvider({ children }) {
       return [...prev, { ...productWithId, quantity: 1 }];
     });
 
-    // 🔹 Google Analytics event
-    if (typeof gtag !== "undefined") {
-      gtag("event", "add_to_cart", {
-        event_category: "Cart",
-        event_label: product.name,
-        value: product.price,
-      });
-    }
+    // ✅ Google Analytics Event Tracking
+    trackEvent({
+      category: "Cart",
+      action: "Add to Cart",
+      label: product.name || "Unnamed Product",
+      value: product.price || 0,
+    });
 
     // 🔹 Backend sync
     if (user) {
@@ -107,14 +106,15 @@ export function CartProvider({ children }) {
 
   // ❌ Remove from cart
   const removeFromCart = async (productId) => {
+    const removedProduct = cart.find(item => item._id === productId);
     setCart(prev => prev.filter(item => item._id !== productId));
 
-    if (typeof gtag !== "undefined") {
-      gtag("event", "remove_from_cart", {
-        event_category: "Cart",
-        event_label: productId,
-      });
-    }
+    // ✅ GA event for removing item
+    trackEvent({
+      category: "Cart",
+      action: "Remove from Cart",
+      label: removedProduct?.name || productId,
+    });
 
     if (user) {
       try {
