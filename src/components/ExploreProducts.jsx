@@ -6,7 +6,7 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import ReactGA from "react-ga4";
 
-const BASE_URL = "http://localhost:5000"; // backend server
+const BASE_URL = "http://localhost:5000";
 
 // Fallback data
 const fallbackProducts = [
@@ -25,71 +25,60 @@ function ExploreProducts() {
   const [startIndex, setStartIndex] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [notification, setNotification] = useState(null);
-
   const visibleCount = 5;
+
   const { cart, addToCart } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
-  // ✅ Fetch products
+  // Fetch products from backend
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const res = await fetch(`${BASE_URL}/api/products`);
         const data = await res.json();
-        const exploreProducts = Array.isArray(data)
-          ? data.filter((p) => p.section === "ExploreProduct")
-          : [];
-        setProducts(exploreProducts.length > 0 ? exploreProducts : fallbackProducts);
+        const exploreProducts = Array.isArray(data) ? data.filter(p => p.section === "ExploreProduct") : [];
+        setProducts(exploreProducts.length ? exploreProducts : fallbackProducts);
       } catch (err) {
-        console.error("⚠️ Backend not reachable. Using fallback products.", err);
+        console.error("Backend unreachable. Using fallback products.", err);
         setProducts(fallbackProducts);
       }
     };
     fetchProducts();
   }, []);
 
-  // ✅ Add to Cart handler with GA event
+  // Track events
+  const trackGAEvent = (category, action, label, value = 0) => {
+    ReactGA.event({ category, action, label, value });
+  };
+
+  // Add to Cart
   const handleAddToCart = (product) => {
-    const productWithId = { ...product, id: product.id || product._id || Date.now() };
-    addToCart(productWithId);
+    const productId = product.id || product._id || Date.now();
+    addToCart({ ...product, id: productId });
     setNotification(`🛒 ${product.name} added to cart ✅`);
-
-    // Google Analytics Event
-    ReactGA.event({
-      category: "Cart",
-      action: "Add to Cart",
-      label: product.name,
-      value: product.price,
-    });
-
+    trackGAEvent("Cart", "Add to Cart", product.name, product.price);
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // ✅ Wishlist toggle with GA event
+  // Wishlist toggle
   const handleWishlistToggle = (product) => {
-    const productWithId = { ...product, id: product.id || product._id || Date.now() };
-    const isInWishlist = wishlist.find((p) => (p.id || p._id) === (product.id || product._id));
+    const productId = product.id || product._id || Date.now();
+    const isInWishlist = wishlist.some(p => (p.id || p._id) === productId);
 
     if (isInWishlist) {
-      removeFromWishlist(product.id || product._id);
+      removeFromWishlist(productId);
       setNotification(`💔 ${product.name} removed from wishlist`);
-      ReactGA.event({
-        category: "Wishlist",
-        action: "Removed",
-        label: product.name,
-      });
+      trackGAEvent("Wishlist", "Removed", product.name);
     } else {
-      addToWishlist(productWithId);
+      addToWishlist({ ...product, id: productId });
       setNotification(`❤️ ${product.name} added to wishlist`);
-      ReactGA.event({
-        category: "Wishlist",
-        action: "Added",
-        label: product.name,
-      });
+      trackGAEvent("Wishlist", "Added", product.name);
     }
+
     setTimeout(() => setNotification(null), 2000);
   };
 
+  // Carousel controls
   const handleNext = () => {
     if (startIndex + visibleCount < products.length) setStartIndex(startIndex + visibleCount);
   };
@@ -128,49 +117,33 @@ function ExploreProducts() {
 
       {/* Products Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-        {visibleProducts.map((product) => {
-          const uniqueId = product.id || product._id || product.name;
-          const isInWishlist = wishlist.find((p) => (p.id || p._id) === uniqueId);
-          const isInCart = cart.find((item) => (item.id || item._id) === uniqueId);
+        {visibleProducts.map(product => {
+          const productId = product.id || product._id || product.name;
+          const isInWishlist = wishlist.some(p => (p.id || p._id) === productId);
+          const isInCart = cart.some(p => (p.id || p._id) === productId);
 
           return (
-            <div
-              key={uniqueId}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition transform hover:scale-105 duration-300 relative overflow-hidden"
-            >
+            <div key={productId} className="bg-white rounded-lg shadow hover:shadow-lg transition transform hover:scale-105 duration-300 relative overflow-hidden">
               <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded">
                 -{product.discount || 10}%
               </div>
 
-              {/* Wishlist */}
               <button
                 onClick={() => handleWishlistToggle(product)}
-                className={`absolute top-2 right-2 p-1 rounded-full transition ${
-                  isInWishlist ? "text-red-500" : "text-gray-400"
-                }`}
+                className={`absolute top-2 right-2 p-1 rounded-full transition ${isInWishlist ? "text-red-500" : "text-gray-400"}`}
               >
                 {isInWishlist ? <FaHeart /> : <FaRegHeart />}
               </button>
 
-              <Link to={`/product/${uniqueId}`} state={{ product }}>
-                <img
-                  src={product.img}
-                  alt={product.name}
-                  className="w-full h-32 sm:h-40 md:h-48 lg:h-56 object-contain rounded-t-lg bg-white"
-                />
+              <Link to={`/product/${productId}`} state={{ product }}>
+                <img src={product.img} alt={product.name} className="w-full h-32 sm:h-40 md:h-48 lg:h-56 object-contain rounded-t-lg bg-white" />
               </Link>
 
               <div className="p-2 sm:p-3 md:p-4 flex flex-col gap-1">
-                <h3 className="text-xs sm:text-sm md:text-base font-semibold truncate">
-                  {product.name}
-                </h3>
+                <h3 className="text-xs sm:text-sm md:text-base font-semibold truncate">{product.name}</h3>
                 <div className="flex items-center gap-2">
-                  <p className="text-red-500 font-bold text-xs sm:text-sm md:text-base">
-                    ${product.price}
-                  </p>
-                  <p className="text-gray-400 line-through text-[10px] sm:text-xs md:text-sm">
-                    ${product.oldPrice || product.price + 50}
-                  </p>
+                  <p className="text-red-500 font-bold text-xs sm:text-sm md:text-base">${product.price}</p>
+                  <p className="text-gray-400 line-through text-[10px] sm:text-xs md:text-sm">${product.oldPrice || product.price + 50}</p>
                 </div>
 
                 {!isInCart ? (
@@ -206,13 +179,7 @@ function ExploreProducts() {
         </div>
       )}
 
-      {notification && (
-        <Notification
-          key={notification}
-          message={notification}
-          onClose={() => setNotification(null)}
-        />
-      )}
+      {notification && <Notification key={notification} message={notification} onClose={() => setNotification(null)} />}
     </div>
   );
 }

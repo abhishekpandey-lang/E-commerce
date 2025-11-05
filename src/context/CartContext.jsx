@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import axios from "axios";
-import { trackEvent } from "../analytics/ga4"; // ✅ Added for GA event tracking
+import { trackEvent } from "../analytics/ga4";         // GA4
+import { trackClarityEvent } from "../analytics/clarity"; // Clarity
 
 const CartContext = createContext();
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -10,7 +11,7 @@ export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
 
-  // ✅ Load cart (backend + local fallback)
+  // Load cart (backend + local fallback)
   useEffect(() => {
     const fetchCart = async () => {
       if (!user) return setCart([]);
@@ -41,7 +42,7 @@ export function CartProvider({ children }) {
     fetchCart();
   }, [user]);
 
-  // ✅ Merge helper
+  // Merge helper
   const mergeCarts = (backendCart, localCart) => {
     const map = new Map();
 
@@ -59,14 +60,14 @@ export function CartProvider({ children }) {
     return Array.from(map.values());
   };
 
-  // ✅ Save to localStorage whenever cart updates
+  // Save to localStorage whenever cart updates
   useEffect(() => {
     if (user) {
       localStorage.setItem(`cart_${user.email}`, JSON.stringify(cart));
     }
   }, [cart, user]);
 
-  // 🛒 Add to cart
+  // Add to cart
   const addToCart = async (product) => {
     const uniqueId = product._id || product.id || Date.now().toString();
     const productWithId = { ...product, _id: uniqueId };
@@ -75,15 +76,13 @@ export function CartProvider({ children }) {
       const existing = prev.find(item => item._id === uniqueId);
       if (existing) {
         return prev.map(item =>
-          item._id === uniqueId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item._id === uniqueId ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prev, { ...productWithId, quantity: 1 }];
     });
 
-    // ✅ Google Analytics Event Tracking
+    // GA4 Event
     trackEvent({
       category: "Cart",
       action: "Add to Cart",
@@ -91,7 +90,14 @@ export function CartProvider({ children }) {
       value: product.price || 0,
     });
 
-    // 🔹 Backend sync
+    // Clarity Event
+    trackClarityEvent("AddToCart", {
+      productId: uniqueId,
+      productName: product.name,
+      price: product.price || 0,
+    });
+
+    // Backend sync
     if (user) {
       try {
         await axios.post(`${BASE_URL}/api/cart/${user.uid}`, {
@@ -104,17 +110,20 @@ export function CartProvider({ children }) {
     }
   };
 
-  // ❌ Remove from cart
+  // Remove from cart
   const removeFromCart = async (productId) => {
     const removedProduct = cart.find(item => item._id === productId);
     setCart(prev => prev.filter(item => item._id !== productId));
 
-    // ✅ GA event for removing item
+    // GA4 Event
     trackEvent({
       category: "Cart",
       action: "Remove from Cart",
       label: removedProduct?.name || productId,
     });
+
+    // Clarity Event
+    trackClarityEvent("RemoveFromCart", { productId });
 
     if (user) {
       try {
@@ -125,15 +134,16 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔁 Update quantity
+  // Update quantity
   const updateQuantity = async (productId, quantity) => {
     if (quantity <= 0) return removeFromCart(productId);
 
     setCart(prev =>
-      prev.map(item =>
-        item._id === productId ? { ...item, quantity } : item
-      )
+      prev.map(item => (item._id === productId ? { ...item, quantity } : item))
     );
+
+    // Clarity Event
+    trackClarityEvent("UpdateCartQuantity", { productId, quantity });
 
     if (user) {
       try {

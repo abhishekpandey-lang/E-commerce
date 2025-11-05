@@ -2,8 +2,12 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import axios from "axios";
 
+// ✅ GA4 + Clarity imports
+import { trackEvent } from "../analytics/ga4";
+import { trackClarityEvent } from "../analytics/clarity";
+
 const WishlistContext = createContext();
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"; // ✅ safe env base URL
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function WishlistProvider({ children }) {
   const { user } = useAuth();
@@ -42,7 +46,7 @@ export function WishlistProvider({ children }) {
       } catch (err) {
         console.error("❌ Wishlist sync failed:", err);
       }
-    }, 1000); // debounce 1 second
+    }, 1000);
 
     return () => clearTimeout(timeout);
   }, [wishlist, user]);
@@ -55,21 +59,20 @@ export function WishlistProvider({ children }) {
       );
       if (alreadyExists) return prev;
 
-      // 🎯 Google Analytics event
-      if (window.gtag) {
-        window.gtag("event", "add_to_wishlist", {
-          event_category: "Wishlist",
-          event_label: product.name,
-          value: product.price || 0,
-          items: [
-            {
-              id: product.id || product._id,
-              name: product.name,
-              price: product.price || 0,
-            },
-          ],
-        });
-      }
+      // 🎯 GA4 event
+      trackEvent({
+        category: "Wishlist",
+        action: "Add",
+        label: product.name,
+        value: product.price || 0,
+      });
+
+      // 🎯 Clarity event
+      trackClarityEvent("AddToWishlist", {
+        productId: product.id || product._id,
+        productName: product.name,
+        price: product.price || 0,
+      });
 
       return [...prev, product];
     });
@@ -82,14 +85,15 @@ export function WishlistProvider({ children }) {
         (item) => (item.id || item._id) !== productId
       );
 
-      // 🎯 Google Analytics event
-      if (window.gtag) {
-        window.gtag("event", "remove_from_wishlist", {
-          event_category: "Wishlist",
-          event_label: productId,
-          items: [{ id: productId }],
-        });
-      }
+      // 🎯 GA4 event
+      trackEvent({
+        category: "Wishlist",
+        action: "Remove",
+        label: productId,
+      });
+
+      // 🎯 Clarity event
+      trackClarityEvent("RemoveFromWishlist", { productId });
 
       return updated;
     });

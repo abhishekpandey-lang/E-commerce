@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import ReactGA from "react-ga4"; // ✅ Added for tracking
+import ReactGA from "react-ga4"; // ✅ GA4
 
 function Profile() {
   const navigate = useNavigate();
 
-  // LocalStorage से user data लाना
   const storedUser = JSON.parse(localStorage.getItem("user")) || null;
 
   const [formData, setFormData] = useState({
@@ -20,9 +19,12 @@ function Profile() {
     confirmPassword: "",
   });
 
-  // ✅ Page view track + user redirect logic
+  // ✅ Page view tracking + redirect
   useEffect(() => {
     ReactGA.send({ hitType: "pageview", page: "/profile" });
+    if (window.clarity) {
+      window.clarity("set", "page", "/profile");
+    }
 
     if (!storedUser) {
       navigate("/login");
@@ -39,28 +41,31 @@ function Profile() {
     }
   }, [navigate]);
 
-  // Handle change (Track input edits)
+  // Handle field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // ✅ GA4 tracking for input edits
+    // ✅ Track field edit GA4
     ReactGA.event({
       category: "Profile Interaction",
       action: "Edited Field",
       label: name,
     });
+
+    // ✅ Track Clarity
+    if (window.clarity) {
+      window.clarity("event", "Profile_Edit_Field", { field_name: name });
+    }
   };
 
   // Save changes
   const handleSave = () => {
-    // Password validation
     if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
       alert("⚠️ New password and confirm password do not match!");
       return;
     }
 
-    // User update
     const updatedUser = {
       ...storedUser,
       firstName: formData.firstName,
@@ -73,20 +78,30 @@ function Profile() {
     localStorage.setItem("user", JSON.stringify(updatedUser));
     alert("✅ Profile updated successfully!");
 
-    // ✅ Track save event
+    // ✅ GA4 save event
     ReactGA.event({
       category: "Profile Interaction",
       action: "Saved Profile Changes",
       label: `${formData.firstName} ${formData.lastName}`,
     });
+
+    // ✅ Clarity save event
+    if (window.clarity) {
+      window.clarity("event", "Profile_Save", { user_name: `${formData.firstName} ${formData.lastName}` });
+    }
   };
 
-  // Cancel button handler (Track cancel event)
+  // Cancel edits
   const handleCancel = () => {
     ReactGA.event({
       category: "Profile Interaction",
       action: "Cancelled Edit",
     });
+
+    if (window.clarity) {
+      window.clarity("event", "Profile_Cancel");
+    }
+
     navigate("/");
   };
 
@@ -95,13 +110,11 @@ function Profile() {
       <Navbar />
 
       <div className="max-w-6xl mx-auto px-4 py-10">
-        {/* Breadcrumb */}
         <p className="text-gray-500 text-sm mb-6">
           Home / <span className="text-black font-medium">My Account</span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-          {/* Sidebar */}
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Manage My Account</h3>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -119,7 +132,6 @@ function Profile() {
             <h3 className="font-bold text-lg mt-6">My Wishlist</h3>
           </div>
 
-          {/* Main Content */}
           <div className="md:col-span-3 border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-bold text-red-500 mb-6">Edit Your Profile</h2>
 
@@ -166,55 +178,16 @@ function Profile() {
               </div>
             </div>
 
-            {/* Password Changes */}
             <h3 className="mt-6 font-semibold">Password Changes</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
-              <div>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={formData.currentPassword}
-                  onChange={handleChange}
-                  placeholder="Current Password"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                />
-              </div>
-              <div>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                  placeholder="New Password"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                />
-              </div>
-              <div>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm New Password"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                />
-              </div>
+              <input type="password" name="currentPassword" value={formData.currentPassword} onChange={handleChange} placeholder="Current Password" className="w-full border border-gray-300 rounded px-3 py-2" />
+              <input type="password" name="newPassword" value={formData.newPassword} onChange={handleChange} placeholder="New Password" className="w-full border border-gray-300 rounded px-3 py-2" />
+              <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm New Password" className="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
 
-            {/* Buttons */}
             <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={handleCancel}
-                className="px-6 py-2 border border-gray-400 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-6 py-2 bg-red-500 text-white rounded"
-              >
-                Save Changes
-              </button>
+              <button onClick={handleCancel} className="px-6 py-2 border border-gray-400 rounded">Cancel</button>
+              <button onClick={handleSave} className="px-6 py-2 bg-red-500 text-white rounded">Save Changes</button>
             </div>
           </div>
         </div>

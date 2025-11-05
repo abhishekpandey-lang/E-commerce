@@ -6,17 +6,22 @@ function Banner() {
 
   // जब user "Shop Now" बटन दबाएगा
   const handleShopNowClick = () => {
-    // 🔹 Google Analytics Event भेजो
+    // 🔹 Google Analytics Event
     ReactGA.event({
       category: "Banner Interaction",
       action: "Clicked Shop Now",
       label: productName,
-      value: 1, // Optional: engagement count
+      value: 1, // Optional
     });
+
+    // 🔹 Microsoft Clarity Event
+    if (window.clarity) {
+      window.clarity("event", "Banner_Click_ShopNow", { product_name: productName });
+    }
 
     console.log(`User clicked Shop Now for: ${productName}`);
 
-    // 🔹 अगर चाहो तो redirect भी कर सकते हैं (उदाहरण के लिए product page पर)
+    // Optional: Redirect
     // window.location.href = "/products/iphone14";
   };
 

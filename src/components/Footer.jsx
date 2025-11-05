@@ -1,35 +1,58 @@
 import { Link } from "react-router-dom";
 
+// 🔹 GA4 + Clarity Event Tracker
+const trackEvent = (action, category, label) => {
+  // GA4 Event
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", action, {
+      event_category: category,
+      event_label: label,
+    });
+  }
+
+  // Microsoft Clarity Event
+  if (typeof window !== "undefined" && window.clarity) {
+    window.clarity("event", action, { category, label });
+  }
+
+  // Dev fallback
+  if (typeof window === "undefined" || (!window.gtag && !window.clarity)) {
+    console.log("Tracking Event:", action, category, label);
+  }
+};
+
 function Footer() {
-
-  // 📊 Google Analytics tracking helper
-  const trackClick = (name, category = "Footer") => {
-    if (window.gtag) {
-      window.gtag("event", "footer_link_click", {
-        event_category: category,
-        event_label: name,
-      });
-    }
-  };
-
-  // 📩 Track newsletter subscription
   const handleSubscribe = () => {
     const emailInput = document.querySelector("#footer-email");
     const email = emailInput?.value.trim();
 
     if (email) {
-      if (window.gtag) {
-        window.gtag("event", "newsletter_subscribe", {
-          event_category: "Newsletter",
-          event_label: email,
-        });
-      }
+      trackEvent("newsletter_subscribe", "Newsletter", email);
       alert("Thank you for subscribing!");
       emailInput.value = "";
     } else {
       alert("Please enter a valid email address.");
     }
   };
+
+  const links = [
+    {
+      title: "Quick Links",
+      items: [
+        { to: "/", label: "Home" },
+        { to: "/about", label: "About Us" },
+        { to: "/contact", label: "Contact" },
+      ],
+    },
+    {
+      title: "Customer Support",
+      items: [
+        { to: "/faq", label: "FAQ" },
+        { to: "/privacy-policy", label: "Privacy Policy" },
+        { to: "/terms-and-conditions", label: "Terms & Conditions" },
+      ],
+    },
+  ];
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-10">
@@ -45,25 +68,25 @@ function Footer() {
           </p>
         </div>
 
-        {/* Quick Links */}
-         <div>
-          <h3 className="text-lg font-semibold text-white mb-3">Quick Links</h3>
-          <ul className="space-y-2">
-            <li><Link to="/" onClick={() => trackClick("Home")} className="hover:text-red-500 transition">Home</Link></li>
-            <li><Link to="/about" onClick={() => trackClick("About Us")} className="hover:text-red-500 transition">About Us</Link></li>
-            <li><Link to="/contact" onClick={() => trackClick("Contact")} className="hover:text-red-500 transition">Contact</Link></li>
-          </ul>
-        </div>
-
-        {/* Customer Support */}
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-3">Customer Support</h3>
-          <ul className="space-y-2">
-            <li><Link to="/faq" onClick={() => trackClick("FAQ")} className="hover:text-red-500 transition">FAQ</Link></li>
-            <li><Link to="/privacy-policy" onClick={() => trackClick("Privacy Policy")} className="hover:text-red-500 transition">Privacy Policy</Link></li>
-            <li><Link to="/terms-and-conditions" onClick={() => trackClick("Terms & Conditions")} className="hover:text-red-500 transition">Terms & Conditions</Link></li>
-          </ul>
-        </div>
+        {/* Links Sections */}
+        {links.map((section, idx) => (
+          <div key={idx}>
+            <h3 className="text-lg font-semibold text-white mb-3">{section.title}</h3>
+            <ul className="space-y-2">
+              {section.items.map((link, i) => (
+                <li key={i}>
+                  <Link
+                    to={link.to}
+                    onClick={() => trackEvent("footer_link_click", "Footer", link.label)}
+                    className="hover:text-red-500 transition"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
 
         {/* Newsletter Signup */}
         <div>

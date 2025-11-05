@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import Notification from "./Notification";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
-import ReactGA from "react-ga4";  // ✅ Google Analytics
+import ReactGA from "react-ga4"; // GA4
 
 const BASE_URL = "http://localhost:5000";
 
@@ -29,7 +29,7 @@ function BestSelling() {
   const { cart, addToCart } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
-  // 🔹 Fetch products
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -56,69 +56,85 @@ function BestSelling() {
       setStartIndex(startIndex - visibleCount);
   };
 
-  // ✅ Add to Cart Tracking
+  // Add to Cart Tracking
   const handleAddToCart = (product) => {
     addToCart(product);
+
+    // GA4 Event
     ReactGA.event({
       category: "Cart",
       action: "Add to Cart",
       label: product.name,
       value: product.price,
     });
-    console.log("🛒 Added to Cart:", {
-      name: product.name,
-      price: product.price,
-      id: product._id,
-    });
+
+    // Clarity Event
+    if (window.clarity) {
+      window.clarity("event", "Add_to_Cart", { product_name: product.name, product_id: product._id });
+    }
+
+    console.log("🛒 Added to Cart:", product.name);
     setNotification(`${product.name} added to cart ✅`);
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // ✅ Wishlist Tracking
+  // Wishlist Tracking
   const handleWishlistToggle = (product) => {
     const isInWishlist = wishlist.find(
       (p) => (p._id || p.id) === (product._id || product.id)
     );
     if (isInWishlist) {
       removeFromWishlist(product._id || product.id);
+
       ReactGA.event({
         category: "Wishlist",
         action: "Removed from Wishlist",
         label: product.name,
       });
-      console.log("💔 Removed from Wishlist:", product.name);
+      if (window.clarity) {
+        window.clarity("event", "Remove_from_Wishlist", { product_name: product.name });
+      }
+
       setNotification(`${product.name} removed from wishlist ❌`);
     } else {
       addToWishlist(product);
+
       ReactGA.event({
         category: "Wishlist",
         action: "Added to Wishlist",
         label: product.name,
       });
-      console.log("❤️ Added to Wishlist:", product.name);
+      if (window.clarity) {
+        window.clarity("event", "Add_to_Wishlist", { product_name: product.name });
+      }
+
       setNotification(`${product.name} added to wishlist ❤️`);
     }
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // ✅ Product View Tracking
+  // Product View Tracking
   const handleViewProduct = (product) => {
     ReactGA.event({
       category: "Product",
       action: "View Product",
       label: product.name,
     });
-    console.log("👀 Viewed Product:", product.name);
+    if (window.clarity) {
+      window.clarity("event", "View_Product", { product_name: product.name });
+    }
   };
 
-  // ✅ View All Button Tracking
+  // View All Button Tracking
   const handleViewAll = () => {
     ReactGA.event({
       category: "BestSelling",
       action: "View All Clicked",
       label: `Total Products: ${products.length}`,
     });
-    console.log("📦 View All Clicked — total:", products.length);
+    if (window.clarity) {
+      window.clarity("event", "View_All_BestSelling", { total_products: products.length });
+    }
     setShowAll(true);
   };
 
@@ -156,7 +172,7 @@ function BestSelling() {
         Best Selling Products
       </h3>
 
-      {/* 🔹 Product Grid */}
+      {/* Product Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
         {visibleProducts.map((product) => {
           const isInWishlist = wishlist.find(

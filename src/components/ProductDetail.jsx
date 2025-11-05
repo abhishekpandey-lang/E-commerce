@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { trackClarityEvent } from "../analytics/clarity"; // ✅ Clarity import
 
 function ProductDetail() {
   const { state } = useLocation();
@@ -15,6 +16,33 @@ function ProductDetail() {
   useEffect(() => {
     window.scrollTo(0, 0); // UX improvement
 
+    const trackView = (data) => {
+      // 🎯 GA: Product View
+      if (window.gtag) {
+        window.gtag("event", "view_item", {
+          event_category: "Product Detail",
+          event_label: data.name,
+          value: data.price,
+          items: [
+            {
+              id: data._id || id,
+              name: data.name,
+              category: data.category || "Uncategorized",
+              price: data.price,
+            },
+          ],
+        });
+      }
+
+      // 🎯 Clarity: Product View
+      trackClarityEvent("ProductView", {
+        productId: data._id || id,
+        productName: data.name,
+        category: data.category || "Uncategorized",
+        price: data.price,
+      });
+    };
+
     if (!product) {
       fetch(`http://localhost:5000/api/products/${id}`)
         .then((res) => {
@@ -24,23 +52,7 @@ function ProductDetail() {
         .then((data) => {
           setProduct(data);
           setLoading(false);
-
-          // 🎯 GA: Product View
-          if (window.gtag) {
-            window.gtag("event", "view_item", {
-              event_category: "Product Detail",
-              event_label: data.name,
-              value: data.price,
-              items: [
-                {
-                  id: data._id || id,
-                  name: data.name,
-                  category: data.category || "Uncategorized",
-                  price: data.price,
-                },
-              ],
-            });
-          }
+          trackView(data);
         })
         .catch((err) => {
           console.error("❌ Product fetch failed:", err);
@@ -48,22 +60,7 @@ function ProductDetail() {
           setLoading(false);
         });
     } else {
-      // 🎯 GA: Product View (from state)
-      if (window.gtag) {
-        window.gtag("event", "view_item", {
-          event_category: "Product Detail",
-          event_label: product.name,
-          value: product.price,
-          items: [
-            {
-              id: product._id || id,
-              name: product.name,
-              category: product.category || "Uncategorized",
-              price: product.price,
-            },
-          ],
-        });
-      }
+      trackView(product);
     }
   }, [id, product]);
 
@@ -88,6 +85,15 @@ function ProductDetail() {
         ],
       });
     }
+
+    // 🎯 Clarity: Buy Now Click
+    trackClarityEvent("BuyNowClick", {
+      productId: product._id || id,
+      productName: product.name,
+      category: product.category || "Uncategorized",
+      price: product.price,
+      quantity: 1,
+    });
 
     navigate("/checkout", { state: { product: { ...product, quantity: 1 } } });
   };

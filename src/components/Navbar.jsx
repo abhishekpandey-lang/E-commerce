@@ -5,15 +5,24 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { FiLogOut, FiShoppingCart, FiHeart, FiUser } from "react-icons/fi";
 
-// 🔹 Google Analytics Event Tracker
+// 🔹 GA4 + Microsoft Clarity Tracker
 const trackEvent = (action, category, label) => {
-  if (window.gtag) {
+  // GA4
+  if (typeof window !== "undefined" && window.gtag) {
     window.gtag("event", action, {
       event_category: category,
       event_label: label,
     });
-  } else {
-    console.log("Tracking:", action, category, label); // Dev log fallback
+  }
+
+  // Microsoft Clarity
+  if (typeof window !== "undefined" && window.clarity) {
+    window.clarity("event", action, { category, label });
+  }
+
+  // Dev log fallback
+  if (typeof window === "undefined" || (!window.gtag && !window.clarity)) {
+    console.log("Tracking:", action, category, label);
   }
 };
 
@@ -24,14 +33,14 @@ function Navbar() {
   const { wishlist } = useWishlist();
   const navigate = useNavigate();
 
-  // ✅ Logout with tracking
+  // Logout with tracking
   const handleLogout = () => {
     trackEvent("logout_click", "Navbar", "User clicked Logout");
     logout();
     navigate("/login");
   };
 
-  // ✅ Badge Component
+  // Badge Component
   const BadgeIcon = ({ to, count, icon: Icon, label }) => (
     <div className="relative flex items-center justify-center">
       <Link
@@ -49,6 +58,12 @@ function Navbar() {
     </div>
   );
 
+  const navItems = [
+    { to: "/", label: "Home" },
+    { to: "/contact", label: "Contact" },
+    { to: "/about", label: "About" },
+  ];
+
   return (
     <header className="bg-gray-900 text-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-10">
@@ -65,18 +80,12 @@ function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex gap-6">
-            {[
-              { to: "/", label: "Home" },
-              { to: "/contact", label: "Contact" },
-              { to: "/about", label: "About" },
-            ].map((item, i) => (
+            {navItems.map((item, i) => (
               <Link
                 key={i}
                 to={item.to}
                 className="hover:text-red-500 transition"
-                onClick={() =>
-                  trackEvent(`${item.label.toLowerCase()}_click`, "Navbar", `Clicked ${item.label}`)
-                }
+                onClick={() => trackEvent(`${item.label.toLowerCase()}_click`, "Navbar", `Clicked ${item.label}`)}
               >
                 {item.label}
               </Link>
@@ -92,50 +101,39 @@ function Navbar() {
             )}
           </nav>
 
-          {/* Right Icons Section */}
+          {/* Right Icons */}
           <div className="hidden md:flex items-center gap-5">
-            {/* Search Box */}
             <div className="flex items-center bg-white rounded-lg overflow-hidden">
               <input
                 type="text"
-                placeholder="What are you looking for?"
+                placeholder="Search..."
                 className="px-3 py-2 text-black outline-none w-40 lg:w-64"
               />
               <button
                 className="bg-[#DB4444] text-white px-3 py-2 hover:bg-red-600 transition"
-                onClick={() =>
-                  trackEvent("search_click", "Navbar", "Clicked Search button")
-                }
+                onClick={() => trackEvent("search_click", "Navbar", "Clicked Search button")}
               >
                 🔍
               </button>
             </div>
 
-            {/* Icons */}
             <BadgeIcon to="/cart" count={cart.length} icon={FiShoppingCart} label="cart" />
             <BadgeIcon to="/wishlist" count={wishlist.length} icon={FiHeart} label="wishlist" />
             <Link
               to="/profile"
-              onClick={() =>
-                trackEvent("profile_click", "Navbar", "Clicked Profile icon")
-              }
+              onClick={() => trackEvent("profile_click", "Navbar", "Clicked Profile icon")}
               className="text-2xl hover:text-red-500"
             >
               <FiUser />
             </Link>
-
             {user && (
-              <button
-                onClick={handleLogout}
-                className="text-2xl hover:text-red-500"
-                title="Logout"
-              >
+              <button onClick={handleLogout} className="text-2xl hover:text-red-500" title="Logout">
                 <FiLogOut />
               </button>
             )}
           </div>
 
-          {/* Hamburger Menu */}
+          {/* Hamburger Mobile Menu */}
           <button
             className="md:hidden text-2xl"
             onClick={() => {
@@ -151,11 +149,7 @@ function Navbar() {
       {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden bg-gray-800 flex flex-col items-center gap-4 py-4 z-50">
-          {[
-            { to: "/", label: "Home" },
-            { to: "/contact", label: "Contact" },
-            { to: "/about", label: "About" },
-          ].map((item, i) => (
+          {navItems.map((item, i) => (
             <Link
               key={i}
               to={item.to}
@@ -168,7 +162,6 @@ function Navbar() {
               {item.label}
             </Link>
           ))}
-
           {!user && (
             <Link
               to="/signup"
@@ -181,8 +174,6 @@ function Navbar() {
               Sign Up
             </Link>
           )}
-
-          {/* Icons Row in Mobile */}
           <div className="flex items-center justify-center gap-5 mt-3">
             <BadgeIcon to="/cart" count={cart.length} icon={FiShoppingCart} label="cart_mobile" />
             <BadgeIcon to="/wishlist" count={wishlist.length} icon={FiHeart} label="wishlist_mobile" />

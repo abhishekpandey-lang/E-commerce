@@ -1,14 +1,27 @@
 import { useState, useEffect } from "react";
 
-// ✅ Centralized Google Analytics Event Tracker
+// 🔹 GA4 + Microsoft Clarity Tracker
 const trackEvent = (action, category, label) => {
+  // GA4
   if (typeof window !== "undefined" && window.gtag) {
     window.gtag("event", action, {
       event_category: category,
       event_label: label,
     });
-  } else {
-    console.log("GA Tracking (dev):", action, category, label);
+  }
+
+  // Microsoft Clarity
+  if (typeof window !== "undefined" && window.clarity) {
+    window.clarity("set", {
+      event: action,
+      category,
+      label,
+    });
+  }
+
+  // Dev fallback
+  if (typeof window === "undefined" || (!window.gtag && !window.clarity)) {
+    console.log("Tracking Event:", action, category, label);
   }
 };
 
@@ -40,8 +53,8 @@ function MusicBanner() {
           minutes = 59;
           seconds = 59;
         } else {
-          // 🔹 Countdown finished → Track event once
           clearInterval(timer);
+          // 🔹 Countdown finished
           trackEvent("countdown_end", "Music Banner", "Countdown finished");
           return prev;
         }

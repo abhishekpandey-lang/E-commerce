@@ -50,73 +50,60 @@ function FlashSale() {
       removeFromWishlist(product.id || product._id);
       setNotification(`${product.name} removed from wishlist ❌`);
 
-      // 📊 GA4 Event: Remove from Wishlist
+      // 📊 GA4 Event
       if (window.gtag) {
         window.gtag("event", "remove_from_wishlist", {
           currency: "USD",
           value: product.price,
-          items: [
-            {
-              item_name: product.name,
-              item_id: product.id || product._id,
-              price: product.price,
-              discount: product.discount || 0,
-              item_category: product.section || "FlashSales",
-            },
-          ],
+          items: [{ item_name: product.name, item_id: product.id || product._id, price: product.price, discount: product.discount || 0, item_category: product.section || "FlashSales" }],
         });
       }
+
+      // ✅ Microsoft Clarity Event
+      if (window.clarity) {
+        window.clarity("event", "Wishlist_Remove", { product_name: product.name });
+      }
+
     } else {
       addToWishlist(product);
       setNotification(`${product.name} added to wishlist ❤️`);
 
-      // 📊 GA4 Event: Add to Wishlist
       if (window.gtag) {
         window.gtag("event", "add_to_wishlist", {
           currency: "USD",
           value: product.price,
-          items: [
-            {
-              item_name: product.name,
-              item_id: product.id || product._id,
-              price: product.price,
-              discount: product.discount || 0,
-              item_category: product.section || "FlashSales",
-            },
-          ],
+          items: [{ item_name: product.name, item_id: product.id || product._id, price: product.price, discount: product.discount || 0, item_category: product.section || "FlashSales" }],
         });
+      }
+
+      if (window.clarity) {
+        window.clarity("event", "Wishlist_Add", { product_name: product.name });
       }
     }
 
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // 🧩 Add to Cart (GA4 format)
+  // 🧩 Add to Cart
   const handleAddToCart = (product) => {
     addToCart(product);
     setNotification(`${product.name} added to cart ✅`);
 
-    // 📊 GA4 Enhanced Ecommerce: Add to Cart
     if (window.gtag) {
       window.gtag("event", "add_to_cart", {
         currency: "USD",
         value: product.price,
-        items: [
-          {
-            item_name: product.name,
-            item_id: product.id || product._id,
-            price: product.price,
-            discount: product.discount || 0,
-            item_category: product.section || "FlashSales",
-          },
-        ],
+        items: [{ item_name: product.name, item_id: product.id || product._id, price: product.price, discount: product.discount || 0, item_category: product.section || "FlashSales" }],
       });
+    }
+
+    if (window.clarity) {
+      window.clarity("event", "Add_To_Cart", { product_name: product.name });
     }
 
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // ⏰ Timer setup
   const handleNext = () => {
     if (startIndex + visibleCount < products.length) setStartIndex(startIndex + visibleCount);
   };
@@ -124,46 +111,14 @@ function FlashSale() {
     if (startIndex - visibleCount >= 0) setStartIndex(startIndex - visibleCount);
   };
 
-  const getMidnight = () => {
-    const midnight = new Date();
-    midnight.setHours(24, 0, 0, 0);
-    return midnight.getTime();
-  };
-
-  const getTimeRemaining = () => {
-    const total = Math.max(getMidnight() - new Date().getTime(), 0);
-    return {
-      days: Math.floor(total / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((total / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((total / 1000 / 60) % 60),
-      seconds: Math.floor((total / 1000) % 60),
-    };
-  };
-
-  const [timeLeft, setTimeLeft] = useState(getTimeRemaining());
-  useEffect(() => {
-    const interval = setInterval(() => setTimeLeft(getTimeRemaining()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   const visibleProducts = showAll ? products : products.slice(startIndex, startIndex + visibleCount);
 
   return (
     <section className="p-4 md:p-6 lg:p-8">
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
           <span className="text-red-500">🏷️ Today’s Flash Sale</span>
         </h2>
-
-        <div className="flex gap-2 md:gap-3 mt-4 md:mt-0 text-center flex-wrap justify-center">
-          {["Days", "Hours", "Minutes", "Seconds"].map((label, i) => (
-            <div key={i} className="min-w-[55px] bg-gray-100 rounded-lg px-2 py-1 md:px-4 md:py-3 flex flex-col items-center">
-              <p className="text-lg sm:text-xl md:text-3xl font-bold">{Object.values(timeLeft)[i]}</p>
-              <span className="text-gray-500 text-[10px] sm:text-xs md:text-sm">{label}</span>
-            </div>
-          ))}
-        </div>
 
         {!showAll && (
           <div className="flex gap-2 md:gap-3 mt-4 md:mt-0">
@@ -177,7 +132,6 @@ function FlashSale() {
         )}
       </div>
 
-      {/* Product Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
         {visibleProducts.map((product) => {
           const isInWishlist = wishlist.some(p => (p.id || p._id) === (product.id || product._id));
@@ -208,17 +162,11 @@ function FlashSale() {
                 </div>
 
                 {!isInCart ? (
-                  <button
-                    onClick={() => handleAddToCart(product)}
-                    className="mt-1 sm:mt-2 w-full bg-red-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-red-600 transition"
-                  >
+                  <button onClick={() => handleAddToCart(product)} className="mt-1 sm:mt-2 w-full bg-red-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-red-600 transition">
                     Add to Cart
                   </button>
                 ) : (
-                  <Link
-                    to="/cart"
-                    className="mt-1 sm:mt-2 w-full bg-green-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-green-600 transition text-center"
-                  >
+                  <Link to="/cart" className="mt-1 sm:mt-2 w-full bg-green-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-green-600 transition text-center">
                     Go to Cart
                   </Link>
                 )}
@@ -228,10 +176,21 @@ function FlashSale() {
         })}
       </div>
 
-      {/* View All Button */}
       <div className="flex justify-center mt-6 md:mt-8">
         {products.length > visibleCount && !showAll && (
-          <button onClick={() => setShowAll(true)} className="bg-[#DB4444] text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
+          <button
+            onClick={() => {
+              setShowAll(true);
+
+              if (window.gtag) {
+                window.gtag("event", "view_all_flashsale", { total_products: products.length });
+              }
+              if (window.clarity) {
+                window.clarity("event", "ViewAll_FlashSale", { total_products: products.length });
+              }
+            }}
+            className="bg-[#DB4444] text-white px-6 py-2 rounded-lg hover:bg-red-600 transition"
+          >
             View All Products
           </button>
         )}

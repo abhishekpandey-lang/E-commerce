@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FiHeart } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
+import { trackClarityEvent } from "../analytics/clarity"; // ✅ Clarity import
 
 function ProductCard({ product, onAddToCart }) {
   const { cart, addToCart } = useCart();
@@ -21,10 +22,11 @@ function ProductCard({ product, onAddToCart }) {
       navigate("/signup");
       return;
     }
+
     addToCart(product);
     onAddToCart?.(product);
 
-    // 🎯 Google Analytics: Add to Cart
+    // 🎯 GA: Add to Cart
     if (typeof gtag !== "undefined") {
       gtag("event", "add_to_cart", {
         event_category: "Cart",
@@ -33,6 +35,13 @@ function ProductCard({ product, onAddToCart }) {
         product_id: product.id || product._id,
       });
     }
+
+    // 🔹 Clarity: Add to Cart
+    trackClarityEvent("AddToCart", {
+      productId: product.id || product._id,
+      productName: product.name,
+      price: product.price,
+    });
   };
 
   // ❤️ Wishlist Toggle
@@ -44,8 +53,20 @@ function ProductCard({ product, onAddToCart }) {
 
     if (isLiked) {
       removeFromWishlist(product.id || product._id);
+
+      // 🔹 Clarity: Wishlist Remove
+      trackClarityEvent("RemoveFromWishlist", {
+        productId: product.id || product._id,
+        productName: product.name,
+      });
     } else {
       addToWishlist(product);
+
+      // 🔹 Clarity: Wishlist Add
+      trackClarityEvent("AddToWishlist", {
+        productId: product.id || product._id,
+        productName: product.name,
+      });
     }
 
     // 🎯 GA: Wishlist event
@@ -71,6 +92,13 @@ function ProductCard({ product, onAddToCart }) {
         product_id: product.id || product._id,
       });
     }
+
+    // 🔹 Clarity: Product Click
+    trackClarityEvent("ProductClick", {
+      productId: product.id || product._id,
+      productName: product.name,
+      price: product.price,
+    });
   };
 
   const price = product.price ?? 0;

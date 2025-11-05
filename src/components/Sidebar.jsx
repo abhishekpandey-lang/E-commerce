@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trackClarityEvent } from "../analytics/clarity"; // ✅ Clarity import
 
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,8 +16,9 @@ function Sidebar() {
     "Health & Beauty",
   ];
 
-  // 🎯 Track category click in Google Analytics
+  // 🎯 Track category click in Google Analytics & Microsoft Clarity
   const handleCategoryClick = (category, index) => {
+    // GA4 Event
     if (window.gtag) {
       window.gtag("event", "category_click", {
         event_category: "Sidebar",
@@ -25,6 +27,12 @@ function Sidebar() {
         items: [{ name: category, index }],
       });
     }
+
+    // Clarity Event
+    trackClarityEvent("CategoryClick", {
+      categoryName: category,
+      categoryIndex: index + 1,
+    });
 
     setIsOpen(false); // close sidebar after click (mobile)
   };

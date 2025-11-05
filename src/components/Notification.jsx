@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { trackClarityEvent } from "../analytics/clarity"; // ✅ Clarity import
 
 function Notification({ message, onClose }) {
   useEffect(() => {
@@ -17,6 +18,12 @@ function Notification({ message, onClose }) {
       console.log("GA: notification_shown →", message);
     }
 
+    // 🔹 Microsoft Clarity: Notification Shown
+    trackClarityEvent("NotificationShown", {
+      message,
+      notificationId,
+    });
+
     // 🔹 Auto-close after 900ms
     const timer = setTimeout(() => {
       onClose();
@@ -31,6 +38,12 @@ function Notification({ message, onClose }) {
       } else {
         console.log("GA: notification_closed_auto →", message);
       }
+
+      // 🔹 Clarity: Auto Closed
+      trackClarityEvent("NotificationClosedAuto", {
+        message,
+        notificationId,
+      });
     }, 900);
 
     return () => clearTimeout(timer);
@@ -60,6 +73,11 @@ function Notification({ message, onClose }) {
             } else {
               console.log("GA: notification_closed_manual →", message);
             }
+
+            // 🔹 Clarity: Manually Closed
+            trackClarityEvent("NotificationClosedManual", {
+              message,
+            });
           }}
           className="ml-2 font-bold hover:text-gray-300 text-lg"
         >
