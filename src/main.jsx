@@ -15,10 +15,7 @@ import App from "./App.jsx";
 const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
 if (GA_MEASUREMENT_ID) {
-  console.log("✅ Google Analytics initialized with:", GA_MEASUREMENT_ID);
   initGA(GA_MEASUREMENT_ID);
-} else {
-  console.warn("⚠️ Google Analytics ID missing! Please set VITE_GA_MEASUREMENT_ID in .env file.");
 }
 
 // 🧩 React App Render
@@ -38,5 +35,4 @@ createRoot(document.getElementById("root")).render(
   </StrictMode>
 );
 
-// 🌐 Deployment URL
-// https://e-commerce-two-beta-61.vercel.app
+// 🌐 Deployment URL // https://e-commerce-two-beta-61.vercel.app 
