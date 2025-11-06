@@ -1,161 +1,166 @@
+// src/context/CartContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import axios from "axios";
-import { trackEvent } from "../analytics/ga4";         // GA4
-import { trackClarityEvent } from "../analytics/clarity"; // Clarity
+import { trackEvent } from "../analytics/ga4";
+import { trackClarityEvent } from "../analytics/clarity";
 
 const CartContext = createContext();
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
 
-  // Load cart (backend + local fallback)
+  // 🔹 Load cart & wishlist from localStorage
   useEffect(() => {
-    const fetchCart = async () => {
-      if (!user) return setCart([]);
-
-      try {
-        const res = await axios.get(`${BASE_URL}/api/usercart/${user.uid}`);
-        let backendCart = [];
-
-        if (res.data && Array.isArray(res.data.items)) {
-          backendCart = res.data.items.map(item => ({
-            ...item.productId,
-            quantity: item.quantity,
-          }));
-        }
-
-        const savedCart = localStorage.getItem(`cart_${user.email}`);
-        const localCart = savedCart ? JSON.parse(savedCart) : [];
-
-        const mergedCart = mergeCarts(backendCart, localCart);
-        setCart(mergedCart);
-      } catch (err) {
-        console.error("⚠️ Backend not reachable, using localStorage fallback:", err);
-        const savedCart = localStorage.getItem(`cart_${user?.email}`);
-        setCart(savedCart ? JSON.parse(savedCart) : []);
-      }
-    };
-
-    fetchCart();
+    if (!user) return;
+    try {
+      const savedCart = localStorage.getItem(`cart_${user.email}`);
+      const savedWishlist = localStorage.getItem(`wishlist_${user.email}`);
+      setCart(savedCart ? JSON.parse(savedCart) : []);
+      setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
+    } catch (err) {
+      console.error("⚠️ Failed to load cart or wishlist from localStorage:", err);
+      setCart([]);
+      setWishlist([]);
+    }
   }, [user]);
 
-  // Merge helper
-  const mergeCarts = (backendCart, localCart) => {
-    const map = new Map();
+  // 🔹 Save cart & wishlist to localStorage
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(`cart_${user.email}`, JSON.stringify(cart));
+      localStorage.setItem(`wishlist_${user.email}`, JSON.stringify(wishlist));
+    } catch (err) {
+      console.error("⚠️ Failed to save cart or wishlist to localStorage:", err);
+    }
+  }, [cart, wishlist, user]);
 
-    [...backendCart, ...localCart].forEach(item => {
-      const id = item._id || item.id || item.name;
-      if (!id) return;
-      if (map.has(id)) {
-        const existing = map.get(id);
-        map.set(id, { ...existing, quantity: existing.quantity + item.quantity });
-      } else {
-        map.set(id, { ...item });
-      }
-    });
-
-    return Array.from(map.values());
+  // 🔹 Analytics helpers
+  const safeTrackEvent = (data) => {
+    if (typeof trackEvent === "function") trackEvent(data.action, data.category, data.label);
+  };
+  const safeTrackClarity = (eventName, data) => {
+    if (typeof trackClarityEvent === "function") trackClarityEvent(eventName, data);
   };
 
-  // Save to localStorage whenever cart updates
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(`cart_${user.email}`, JSON.stringify(cart));
-    }
-  }, [cart, user]);
+  // 🔹 Cart actions
+  const addToCart = (product) => {
+    if (!product) return;
 
-  // Add to cart
-  const addToCart = async (product) => {
     const uniqueId = product._id || product.id || Date.now().toString();
     const productWithId = { ...product, _id: uniqueId };
 
-    setCart(prev => {
-      const existing = prev.find(item => item._id === uniqueId);
+    setCart((prev) => {
+      const existing = prev.find((item) => item._id === uniqueId);
       if (existing) {
-        return prev.map(item =>
+        return prev.map((item) =>
           item._id === uniqueId ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prev, { ...productWithId, quantity: 1 }];
     });
 
-    // GA4 Event
-    trackEvent({
+    safeTrackEvent({
       category: "Cart",
       action: "Add to Cart",
       label: product.name || "Unnamed Product",
       value: product.price || 0,
     });
-
-    // Clarity Event
-    trackClarityEvent("AddToCart", {
+    safeTrackClarity("AddToCart", {
       productId: uniqueId,
       productName: product.name,
       price: product.price || 0,
+      quantity: 1,
     });
-
-    // Backend sync
-    if (user) {
-      try {
-        await axios.post(`${BASE_URL}/api/cart/${user.uid}`, {
-          productId: uniqueId,
-          quantity: 1,
-        });
-      } catch (err) {
-        console.error("❌ Add to cart backend failed:", err);
-      }
-    }
   };
 
-  // Remove from cart
-  const removeFromCart = async (productId) => {
-    const removedProduct = cart.find(item => item._id === productId);
-    setCart(prev => prev.filter(item => item._id !== productId));
+  const removeFromCart = (productId) => {
+    const removedProduct = cart.find((item) => item._id === productId);
+    setCart((prev) => prev.filter((item) => item._id !== productId));
 
-    // GA4 Event
-    trackEvent({
+    safeTrackEvent({
       category: "Cart",
       action: "Remove from Cart",
       label: removedProduct?.name || productId,
     });
-
-    // Clarity Event
-    trackClarityEvent("RemoveFromCart", { productId });
-
-    if (user) {
-      try {
-        await axios.delete(`${BASE_URL}/api/cart/${user.uid}/${productId}`);
-      } catch (err) {
-        console.error("❌ Remove from cart backend failed:", err);
-      }
-    }
+    safeTrackClarity("RemoveFromCart", {
+      productId,
+      productName: removedProduct?.name || "Unknown",
+    });
   };
 
-  // Update quantity
-  const updateQuantity = async (productId, quantity) => {
+  const updateQuantity = (productId, quantity) => {
     if (quantity <= 0) return removeFromCart(productId);
-
-    setCart(prev =>
-      prev.map(item => (item._id === productId ? { ...item, quantity } : item))
+    setCart((prev) =>
+      prev.map((item) => (item._id === productId ? { ...item, quantity } : item))
     );
+    safeTrackClarity("UpdateCartQuantity", { productId, quantity });
+  };
 
-    // Clarity Event
-    trackClarityEvent("UpdateCartQuantity", { productId, quantity });
+  const clearCart = () => {
+    setCart([]);
+    safeTrackEvent({ category: "Cart", action: "Clear Cart", label: "All items removed" });
+    safeTrackClarity("ClearCart", {});
+  };
 
-    if (user) {
-      try {
-        await axios.put(`${BASE_URL}/api/cart/${user.uid}/${productId}`, { quantity });
-      } catch (err) {
-        console.error("❌ Update cart backend failed:", err);
-      }
-    }
+  // 🔹 Wishlist actions
+  const addToWishlist = (product) => {
+    if (!product) return;
+    const uniqueId = product._id || product.id || Date.now().toString();
+
+    setWishlist((prev) => {
+      if (prev.find((item) => item._id === uniqueId)) return prev; // Already in wishlist
+      return [...prev, { ...product, _id: uniqueId }];
+    });
+
+    safeTrackEvent({
+      category: "Wishlist",
+      action: "Add to Wishlist",
+      label: product.name || "Unnamed Product",
+    });
+    safeTrackClarity("AddToWishlist", {
+      productId: uniqueId,
+      productName: product.name,
+    });
+  };
+
+  const removeFromWishlist = (productId) => {
+    const removedProduct = wishlist.find((item) => item._id === productId);
+    setWishlist((prev) => prev.filter((item) => item._id !== productId));
+
+    safeTrackEvent({
+      category: "Wishlist",
+      action: "Remove from Wishlist",
+      label: removedProduct?.name || productId,
+    });
+    safeTrackClarity("RemoveFromWishlist", {
+      productId,
+      productName: removedProduct?.name || "Unknown",
+    });
+  };
+
+  const clearWishlist = () => {
+    setWishlist([]);
+    safeTrackEvent({ category: "Wishlist", action: "Clear Wishlist", label: "All items removed" });
+    safeTrackClarity("ClearWishlist", {});
   };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        wishlist,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        addToWishlist,
+        removeFromWishlist,
+        clearWishlist,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

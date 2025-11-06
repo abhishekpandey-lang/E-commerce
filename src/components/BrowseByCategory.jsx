@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 function BrowseByCategory() {
   const navigate = useNavigate();
 
+  // 🔹 Static category data (no backend)
   const categories = [
     { id: 1, name: "Phones", icon: "📱", slug: "phones" },
     { id: 2, name: "Computers", icon: "💻", slug: "computers" },
@@ -14,14 +15,33 @@ function BrowseByCategory() {
     { id: 6, name: "Gaming", icon: "🎮", slug: "gaming" },
   ];
 
+  // 🔹 Safe GA4 event trigger
+  const safeGA4Event = (data) => {
+    if (typeof ReactGA.event === "function") {
+      ReactGA.event(data);
+      console.log("GA4 Event:", data);
+    }
+  };
+
+  // 🔹 Safe Microsoft Clarity event trigger
+  const safeClarityEvent = (eventName, data) => {
+    if (typeof window !== "undefined" && typeof window.clarity === "function") {
+      window.clarity("event", eventName, data);
+      console.log("Clarity Event:", eventName, data);
+    }
+  };
+
   // 🔹 Category click handler
   const handleCategoryClick = (category) => {
-    // GA4 Event
-    ReactGA.event({
+    // GA4 event
+    safeGA4Event({
       category: "Category Interaction",
       action: "Category Clicked",
       label: category.name,
     });
+
+    // Microsoft Clarity event
+    safeClarityEvent("Category_Clicked", { category_name: category.name });
 
     console.log(`📊 Category Clicked: ${category.name}`);
 
@@ -31,14 +51,9 @@ function BrowseByCategory() {
     }
   };
 
-  // Placeholder for carousel logic
-  const handlePrev = () => {
-    console.log("◀ Previous category clicked");
-  };
-
-  const handleNext = () => {
-    console.log("▶ Next category clicked");
-  };
+  // Placeholder carousel controls (frontend-only)
+  const handlePrev = () => console.log("◀ Previous category clicked");
+  const handleNext = () => console.log("▶ Next category clicked");
 
   return (
     <section className="mt-6 px-4 sm:px-6 lg:px-10">

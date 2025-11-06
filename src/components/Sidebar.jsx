@@ -16,16 +16,17 @@ function Sidebar() {
     "Health & Beauty",
   ];
 
-  // 🎯 Track category click in Google Analytics & Microsoft Clarity
   const handleCategoryClick = (category, index) => {
     // GA4 Event
-    if (window.gtag) {
+    if (typeof window !== "undefined" && window.gtag) {
       window.gtag("event", "category_click", {
         event_category: "Sidebar",
         event_label: category,
         value: index + 1,
         items: [{ name: category, index }],
       });
+    } else {
+      console.log(`GA4 → category_click: ${category}, index: ${index + 1}`);
     }
 
     // Clarity Event
@@ -34,7 +35,7 @@ function Sidebar() {
       categoryIndex: index + 1,
     });
 
-    setIsOpen(false); // close sidebar after click (mobile)
+    setIsOpen(false); // close sidebar after click on mobile
   };
 
   return (
@@ -48,16 +49,16 @@ function Sidebar() {
         ☰
       </button>
 
-      {/* Sidebar for Desktop */}
+      {/* Desktop Sidebar */}
       <aside
-        className="w-64 border-gray-200 border-r p-4 hidden md:block bg-white"
+        className="hidden md:block w-64 border-r border-gray-200 p-4 bg-white"
         aria-label="Sidebar navigation"
       >
         <ul className="space-y-3">
           {categories.map((cat, i) => (
             <li
               key={i}
-              className="hover:text-red-500 cursor-pointer transition"
+              className="hover:text-red-500 cursor-pointer transition-colors duration-200"
               onClick={() => handleCategoryClick(cat, i)}
             >
               {cat}
@@ -66,11 +67,19 @@ function Sidebar() {
         </ul>
       </aside>
 
-      {/* Sidebar for Mobile (Animated Slide-in) */}
+      {/* Mobile Sidebar */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex">
+        <div className="fixed inset-0 z-50 flex">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          ></div>
+
+          {/* Sidebar panel */}
           <aside
-            className="w-64 bg-white h-full p-4 shadow-2xl transform transition-transform duration-300 translate-x-0"
+            className="relative w-64 bg-white h-full p-4 shadow-2xl transform transition-transform duration-300 translate-x-0"
             aria-label="Mobile sidebar"
           >
             <button
@@ -84,7 +93,7 @@ function Sidebar() {
               {categories.map((cat, i) => (
                 <li
                   key={i}
-                  className="hover:text-red-500 cursor-pointer transition"
+                  className="hover:text-red-500 cursor-pointer transition-colors duration-200"
                   onClick={() => handleCategoryClick(cat, i)}
                 >
                   {cat}
@@ -92,13 +101,6 @@ function Sidebar() {
               ))}
             </ul>
           </aside>
-
-          {/* Click on background to close */}
-          <div
-            className="flex-1"
-            onClick={() => setIsOpen(false)}
-            aria-hidden="true"
-          ></div>
         </div>
       )}
     </>

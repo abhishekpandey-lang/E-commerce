@@ -1,114 +1,116 @@
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FiHeart } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
-import { trackClarityEvent } from "../analytics/clarity"; // ✅ Clarity import
+import { trackClarityEvent } from "../analytics/clarity";
 
 function ProductCard({ product, onAddToCart }) {
   const { cart, addToCart } = useCart();
-  const { addToWishlist, removeFromWishlist, wishlist } = useWishlist();
+  const { wishlist, toggleWishlist } = useWishlist();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const inCart = cart.some((item) => item.id === product.id || item._id === product._id);
-  const isLiked = wishlist.some((item) => item.id === product.id || item._id === product._id);
+  const productId = useMemo(
+    () => product._id || product.id || Date.now().toString(),
+    [product]
+  );
+
+  const inCart = cart.some((item) => item._id === productId);
+  const isLiked = wishlist.some((item) => item._id === productId);
 
   // 🛒 Add to Cart
   const handleAddToCart = () => {
-    if (!user) {
-      navigate("/signup");
-      return;
-    }
+    if (!user) return navigate("/signup");
 
     addToCart(product);
     onAddToCart?.(product);
 
-    // 🎯 GA: Add to Cart
-    if (typeof gtag !== "undefined") {
-      gtag("event", "add_to_cart", {
+    // ✅ GA4 safe check
+    if (window.gtag) {
+      window.gtag("event", "add_to_cart", {
         event_category: "Cart",
         event_label: product.name,
-        value: product.price,
-        product_id: product.id || product._id,
+        value: product.price ?? 0,
+        product_id: productId,
       });
     }
 
-    // 🔹 Clarity: Add to Cart
-    trackClarityEvent("AddToCart", {
-      productId: product.id || product._id,
-      productName: product.name,
-      price: product.price,
-    });
+    // ✅ Clarity safe check
+    if (typeof trackClarityEvent === "function") {
+      trackClarityEvent("AddToCart", {
+        productId,
+        productName: product.name,
+        price: product.price ?? 0,
+      });
+    }
   };
 
-  // ❤️ Wishlist Toggle
+  // 💖 Wishlist toggle
   const handleWishlist = () => {
-    if (!user) {
-      navigate("/signup");
-      return;
+    if (!user) return navigate("/signup");
+
+    const willLike = !isLiked; // next state
+    toggleWishlist(product);
+
+    // ✅ Clarity safe check
+    if (typeof trackClarityEvent === "function") {
+      trackClarityEvent(
+        willLike ? "AddToWishlist" : "RemoveFromWishlist",
+        {
+          productId,
+          productName: product.name,
+          price: product.price ?? 0,
+        }
+      );
     }
 
-    if (isLiked) {
-      removeFromWishlist(product.id || product._id);
-
-      // 🔹 Clarity: Wishlist Remove
-      trackClarityEvent("RemoveFromWishlist", {
-        productId: product.id || product._id,
-        productName: product.name,
-      });
-    } else {
-      addToWishlist(product);
-
-      // 🔹 Clarity: Wishlist Add
-      trackClarityEvent("AddToWishlist", {
-        productId: product.id || product._id,
-        productName: product.name,
-      });
-    }
-
-    // 🎯 GA: Wishlist event
-    if (typeof gtag !== "undefined") {
-      gtag("event", isLiked ? "remove_from_wishlist" : "add_to_wishlist", {
+    // ✅ GA4 safe check
+    if (window.gtag) {
+      window.gtag("event", willLike ? "add_to_wishlist" : "remove_from_wishlist", {
         event_category: "Wishlist",
         event_label: product.name,
-        product_id: product.id || product._id,
+        product_id: productId,
       });
     }
+
+    // ✅ Navigate only when item added to wishlist
+    if (willLike) navigate("/wishlist");
   };
 
-  // 👉 Product Detail Navigation
+  // 🔍 Product Detail Navigation
   const goToDetail = () => {
-    navigate(`/product/${product.id || product._id}`, { state: { product } });
+    navigate(`/product/${productId}`, { state: { product } });
 
-    // 🎯 GA: Product Click
-    if (typeof gtag !== "undefined") {
-      gtag("event", "product_click", {
+    if (window.gtag) {
+      window.gtag("event", "product_click", {
         event_category: "Product",
         event_label: product.name,
-        value: product.price,
-        product_id: product.id || product._id,
+        value: product.price ?? 0,
+        product_id: productId,
       });
     }
 
-    // 🔹 Clarity: Product Click
-    trackClarityEvent("ProductClick", {
-      productId: product.id || product._id,
-      productName: product.name,
-      price: product.price,
-    });
+    if (typeof trackClarityEvent === "function") {
+      trackClarityEvent("ProductClick", {
+        productId,
+        productName: product.name,
+        price: product.price ?? 0,
+      });
+    }
   };
 
+  // 💲Product Info
   const price = product.price ?? 0;
   const oldPrice = product.oldPrice ?? price + 50;
   const discount = product.discount ?? 0;
-  const rating = product.rating ?? 0;
+  const rating = Math.min(product.rating ?? 0, 5);
   const reviews = product.reviews ?? 0;
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg relative transition-all duration-300">
+    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-lg relative transition-all duration-300 bg-white">
       {/* ❤️ Wishlist Button */}
       <button
         onClick={handleWishlist}
@@ -116,33 +118,35 @@ function ProductCard({ product, onAddToCart }) {
           isLiked ? "text-red-500 bg-white" : "text-gray-400 bg-white hover:text-red-500"
         }`}
         title={isLiked ? "Remove from Wishlist" : "Add to Wishlist"}
+        aria-label={isLiked ? "Remove from Wishlist" : "Add to Wishlist"}
       >
         {isLiked ? <FaHeart /> : <FiHeart />}
       </button>
 
-      {/* 🖼 Product Image */}
+      {/* 🖼️ Product Image */}
       <img
-        src={product.img}
-        alt={product.name}
+        src={product.img || "/fallback-image.webp"}
+        alt={product.name || "Product"}
         className="h-40 mx-auto object-contain cursor-pointer transition-transform duration-300 hover:scale-105"
         onClick={goToDetail}
+        onError={(e) => (e.target.src = "/fallback-image.webp")}
       />
 
-      {/* 📌 Product Name */}
+      {/* 📦 Product Name */}
       <h3
-        className="mt-2 font-semibold cursor-pointer hover:text-red-500"
+        className="mt-2 font-semibold cursor-pointer hover:text-red-500 truncate"
         onClick={goToDetail}
       >
         {product.name}
       </h3>
 
-      {/* 💲 Price */}
-      <div className="flex gap-2 items-center">
+      {/* 💰 Price */}
+      <div className="flex gap-2 items-center mt-1">
         <span className="text-red-500 font-bold">${price}</span>
         <span className="line-through text-gray-500">${oldPrice}</span>
       </div>
 
-      {/* ⭐ Rating + Reviews */}
+      {/* ⭐ Rating */}
       <div className="mt-2 flex items-center gap-1">
         <div className="flex text-yellow-400 text-sm">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -152,10 +156,10 @@ function ProductCard({ product, onAddToCart }) {
         <span className="text-xs text-gray-600">({reviews})</span>
       </div>
 
-      {/* 📉 Discount */}
-      {discount > 0 && <span className="text-green-600 text-sm">-{discount}% Off</span>}
+      {/* 🏷️ Discount */}
+      {discount > 0 && <span className="text-green-600 text-sm mt-1 block">-{discount}% Off</span>}
 
-      {/* 🛒 Add to Cart / Go to Cart */}
+      {/* 🛒 Add / Go to Cart */}
       {inCart ? (
         <button
           className="mt-3 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"

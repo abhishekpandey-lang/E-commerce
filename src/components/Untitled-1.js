@@ -6,7 +6,6 @@ import ReactGA from "react-ga4"; // ✅ GA4
 
 function Profile() {
   const navigate = useNavigate();
-
   const storedUser = JSON.parse(localStorage.getItem("user")) || null;
 
   const [formData, setFormData] = useState({
@@ -19,10 +18,13 @@ function Profile() {
     confirmPassword: "",
   });
 
-  // ✅ Page view tracking + redirect
+  // ✅ Page view tracking + redirect if not logged in
   useEffect(() => {
-    ReactGA.send({ hitType: "pageview", page: "/profile" });
-    if (window.clarity) {
+    if (typeof ReactGA !== "undefined") {
+      ReactGA.send({ hitType: "pageview", page: "/profile" });
+    }
+
+    if (typeof window !== "undefined" && window.clarity) {
       window.clarity("set", "page", "/profile");
     }
 
@@ -39,22 +41,23 @@ function Profile() {
         confirmPassword: "",
       });
     }
-  }, [navigate]);
+  }, [navigate, storedUser]);
 
   // Handle field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // ✅ Track field edit GA4
-    ReactGA.event({
-      category: "Profile Interaction",
-      action: "Edited Field",
-      label: name,
-    });
+    // ✅ GA4 & Clarity field edit
+    if (typeof ReactGA !== "undefined") {
+      ReactGA.event({
+        category: "Profile Interaction",
+        action: "Edited Field",
+        label: name,
+      });
+    }
 
-    // ✅ Track Clarity
-    if (window.clarity) {
+    if (typeof window !== "undefined" && window.clarity) {
       window.clarity("event", "Profile_Edit_Field", { field_name: name });
     }
   };
@@ -78,27 +81,29 @@ function Profile() {
     localStorage.setItem("user", JSON.stringify(updatedUser));
     alert("✅ Profile updated successfully!");
 
-    // ✅ GA4 save event
-    ReactGA.event({
-      category: "Profile Interaction",
-      action: "Saved Profile Changes",
-      label: `${formData.firstName} ${formData.lastName}`,
-    });
+    if (typeof ReactGA !== "undefined") {
+      ReactGA.event({
+        category: "Profile Interaction",
+        action: "Saved Profile Changes",
+        label: `${formData.firstName} ${formData.lastName}`,
+      });
+    }
 
-    // ✅ Clarity save event
-    if (window.clarity) {
+    if (typeof window !== "undefined" && window.clarity) {
       window.clarity("event", "Profile_Save", { user_name: `${formData.firstName} ${formData.lastName}` });
     }
   };
 
   // Cancel edits
   const handleCancel = () => {
-    ReactGA.event({
-      category: "Profile Interaction",
-      action: "Cancelled Edit",
-    });
+    if (typeof ReactGA !== "undefined") {
+      ReactGA.event({
+        category: "Profile Interaction",
+        action: "Cancelled Edit",
+      });
+    }
 
-    if (window.clarity) {
+    if (typeof window !== "undefined" && window.clarity) {
       window.clarity("event", "Profile_Cancel");
     }
 
@@ -108,13 +113,13 @@ function Profile() {
   return (
     <>
       <Navbar />
-
       <div className="max-w-6xl mx-auto px-4 py-10">
         <p className="text-gray-500 text-sm mb-6">
           Home / <span className="text-black font-medium">My Account</span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+          {/* Sidebar */}
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Manage My Account</h3>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -132,6 +137,7 @@ function Profile() {
             <h3 className="font-bold text-lg mt-6">My Wishlist</h3>
           </div>
 
+          {/* Profile Form */}
           <div className="md:col-span-3 border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-bold text-red-500 mb-6">Edit Your Profile</h2>
 
@@ -192,7 +198,6 @@ function Profile() {
           </div>
         </div>
       </div>
-
       <Footer />
     </>
   );

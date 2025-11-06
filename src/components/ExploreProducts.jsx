@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FaChevronLeft, FaChevronRight, FaHeart, FaRegHeart } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import Notification from "./Notification";
@@ -6,9 +6,7 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import ReactGA from "react-ga4";
 
-const BASE_URL = "http://localhost:5000";
-
-// Fallback data
+// 🔹 Static fallback products (no backend)
 const fallbackProducts = [
   { id: 13, name: "Kids Electric Car", price: 850, img: "/Kids Electric Car.webp", discount: 12, oldPrice: 970 },
   { id: 14, name: "Jr. Zoom Soccer Cleats", price: 100, img: "/Jr. Zoom Soccer Cleats.webp", discount: 8, oldPrice: 110 },
@@ -21,7 +19,7 @@ const fallbackProducts = [
 ];
 
 function ExploreProducts() {
-  const [products, setProducts] = useState(fallbackProducts);
+  const [products] = useState(fallbackProducts);
   const [startIndex, setStartIndex] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -30,60 +28,58 @@ function ExploreProducts() {
   const { cart, addToCart } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
-  // Fetch products from backend
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/api/products`);
-        const data = await res.json();
-        const exploreProducts = Array.isArray(data) ? data.filter(p => p.section === "ExploreProduct") : [];
-        setProducts(exploreProducts.length ? exploreProducts : fallbackProducts);
-      } catch (err) {
-        console.error("Backend unreachable. Using fallback products.", err);
-        setProducts(fallbackProducts);
-      }
-    };
-    fetchProducts();
-  }, []);
+  // 🔹 Safe GA4 event
+  const safeGA4Event = (data) => {
+    if (typeof ReactGA.event === "function") {
+      ReactGA.event(data);
+      console.log("GA4 Event:", data);
+    }
+  };
 
-  // Track events
-  const trackGAEvent = (category, action, label, value = 0) => {
-    ReactGA.event({ category, action, label, value });
+  // 🔹 Safe Microsoft Clarity event
+  const safeClarityEvent = (eventName, data) => {
+    if (typeof window !== "undefined" && typeof window.clarity === "function") {
+      window.clarity("event", eventName, data);
+      console.log("Clarity Event:", eventName, data);
+    }
   };
 
   // Add to Cart
   const handleAddToCart = (product) => {
-    const productId = product.id || product._id || Date.now();
-    addToCart({ ...product, id: productId });
+    addToCart(product);
     setNotification(`🛒 ${product.name} added to cart ✅`);
-    trackGAEvent("Cart", "Add to Cart", product.name, product.price);
+    safeGA4Event({ category: "Cart", action: "Add to Cart", label: product.name, value: product.price });
+    safeClarityEvent("Add_to_Cart", { product_name: product.name, product_id: product.id });
     setTimeout(() => setNotification(null), 2000);
   };
 
   // Wishlist toggle
   const handleWishlistToggle = (product) => {
-    const productId = product.id || product._id || Date.now();
-    const isInWishlist = wishlist.some(p => (p.id || p._id) === productId);
+    const isInWishlist = wishlist.some(p => p.id === product.id);
 
     if (isInWishlist) {
-      removeFromWishlist(productId);
+      removeFromWishlist(product.id);
       setNotification(`💔 ${product.name} removed from wishlist`);
-      trackGAEvent("Wishlist", "Removed", product.name);
+      safeGA4Event({ category: "Wishlist", action: "Removed", label: product.name });
+      safeClarityEvent("Remove_from_Wishlist", { product_name: product.name });
     } else {
-      addToWishlist({ ...product, id: productId });
+      addToWishlist(product);
       setNotification(`❤️ ${product.name} added to wishlist`);
-      trackGAEvent("Wishlist", "Added", product.name);
+      safeGA4Event({ category: "Wishlist", action: "Added", label: product.name });
+      safeClarityEvent("Add_to_Wishlist", { product_name: product.name });
     }
 
     setTimeout(() => setNotification(null), 2000);
   };
 
-  // Carousel controls
-  const handleNext = () => {
-    if (startIndex + visibleCount < products.length) setStartIndex(startIndex + visibleCount);
-  };
-  const handlePrev = () => {
-    if (startIndex - visibleCount >= 0) setStartIndex(startIndex - visibleCount);
+  // Carousel
+  const handleNext = () => { if (startIndex + visibleCount < products.length) setStartIndex(startIndex + visibleCount); };
+  const handlePrev = () => { if (startIndex - visibleCount >= 0) setStartIndex(startIndex - visibleCount); };
+
+  const handleViewAll = () => {
+    safeGA4Event({ category: "ExploreProducts", action: "View All Clicked", label: `Total Products: ${products.length}` });
+    safeClarityEvent("View_All_ExploreProducts", { total_products: products.length });
+    setShowAll(true);
   };
 
   const visibleProducts = showAll ? products : products.slice(startIndex, startIndex + visibleCount);
@@ -92,23 +88,13 @@ function ExploreProducts() {
     <div className="mt-16 px-4 sm:px-6 md:px-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
-          Explore Our Products
-        </h2>
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Explore Our Products</h2>
         {!showAll && products.length > visibleCount && (
           <div className="hidden sm:flex gap-3">
-            <button
-              onClick={handlePrev}
-              disabled={startIndex === 0}
-              className="p-2 md:p-3 bg-gray-100 rounded-full shadow hover:bg-gray-200 disabled:opacity-40 transition"
-            >
+            <button onClick={handlePrev} disabled={startIndex === 0} className="p-2 md:p-3 bg-gray-100 rounded-full shadow hover:bg-gray-200 disabled:opacity-40 transition">
               <FaChevronLeft />
             </button>
-            <button
-              onClick={handleNext}
-              disabled={startIndex + visibleCount >= products.length}
-              className="p-2 md:p-3 bg-gray-100 rounded-full shadow hover:bg-gray-200 disabled:opacity-40 transition"
-            >
+            <button onClick={handleNext} disabled={startIndex + visibleCount >= products.length} className="p-2 md:p-3 bg-gray-100 rounded-full shadow hover:bg-gray-200 disabled:opacity-40 transition">
               <FaChevronRight />
             </button>
           </div>
@@ -118,24 +104,21 @@ function ExploreProducts() {
       {/* Products Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
         {visibleProducts.map(product => {
-          const productId = product.id || product._id || product.name;
-          const isInWishlist = wishlist.some(p => (p.id || p._id) === productId);
-          const isInCart = cart.some(p => (p.id || p._id) === productId);
+          const isInWishlist = wishlist.some(p => p.id === product.id);
+          const isInCart = cart.some(p => p.id === product.id);
 
           return (
-            <div key={productId} className="bg-white rounded-lg shadow hover:shadow-lg transition transform hover:scale-105 duration-300 relative overflow-hidden">
+            <div key={product.id} className="bg-white rounded-lg shadow hover:shadow-lg transition transform hover:scale-105 duration-300 relative overflow-hidden">
               <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded">
-                -{product.discount || 10}%
+                -{product.discount}%
               </div>
 
-              <button
-                onClick={() => handleWishlistToggle(product)}
-                className={`absolute top-2 right-2 p-1 rounded-full transition ${isInWishlist ? "text-red-500" : "text-gray-400"}`}
-              >
+              {/* Wishlist */}
+              <button onClick={() => handleWishlistToggle(product)} className={`absolute top-2 right-2 p-1 rounded-full transition ${isInWishlist ? "text-red-500" : "text-gray-400"}`}>
                 {isInWishlist ? <FaHeart /> : <FaRegHeart />}
               </button>
 
-              <Link to={`/product/${productId}`} state={{ product }}>
+              <Link to={`/product/${product.id}`} state={{ product }}>
                 <img src={product.img} alt={product.name} className="w-full h-32 sm:h-40 md:h-48 lg:h-56 object-contain rounded-t-lg bg-white" />
               </Link>
 
@@ -143,21 +126,15 @@ function ExploreProducts() {
                 <h3 className="text-xs sm:text-sm md:text-base font-semibold truncate">{product.name}</h3>
                 <div className="flex items-center gap-2">
                   <p className="text-red-500 font-bold text-xs sm:text-sm md:text-base">${product.price}</p>
-                  <p className="text-gray-400 line-through text-[10px] sm:text-xs md:text-sm">${product.oldPrice || product.price + 50}</p>
+                  <p className="text-gray-400 line-through text-[10px] sm:text-xs md:text-sm">${product.oldPrice}</p>
                 </div>
 
                 {!isInCart ? (
-                  <button
-                    onClick={() => handleAddToCart(product)}
-                    className="mt-1 sm:mt-2 w-full bg-red-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-red-600 transition"
-                  >
+                  <button onClick={() => handleAddToCart(product)} className="mt-1 sm:mt-2 w-full bg-red-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-red-600 transition">
                     Add to Cart
                   </button>
                 ) : (
-                  <Link
-                    to="/cart"
-                    className="mt-1 sm:mt-2 w-full bg-green-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-green-600 transition text-center"
-                  >
+                  <Link to="/cart" className="mt-1 sm:mt-2 w-full bg-green-500 text-white text-xs sm:text-sm md:text-base py-1.5 rounded hover:bg-green-600 transition text-center">
                     Go to Cart
                   </Link>
                 )}
@@ -170,10 +147,7 @@ function ExploreProducts() {
       {/* View All */}
       {!showAll && products.length > visibleCount && (
         <div className="text-center mt-8">
-          <button
-            onClick={() => setShowAll(true)}
-            className="px-6 py-2 bg-[#DB4444] text-white text-sm md:text-lg font-semibold rounded-lg shadow-md hover:bg-red-600 transition"
-          >
+          <button onClick={handleViewAll} className="px-6 py-2 bg-[#DB4444] text-white text-sm md:text-lg font-semibold rounded-lg shadow-md hover:bg-red-600 transition">
             View All Products
           </button>
         </div>

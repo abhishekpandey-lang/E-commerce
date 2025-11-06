@@ -1,31 +1,21 @@
 import { useState, useEffect } from "react";
 
-// 🔹 GA4 + Microsoft Clarity Tracker
+// 🔹 GA4 + Microsoft Clarity Tracker (frontend-only safe)
 const trackEvent = (action, category, label) => {
-  // GA4
-  if (typeof window !== "undefined" && window.gtag) {
-    window.gtag("event", action, {
-      event_category: category,
-      event_label: label,
-    });
-  }
-
-  // Microsoft Clarity
-  if (typeof window !== "undefined" && window.clarity) {
-    window.clarity("set", {
-      event: action,
-      category,
-      label,
-    });
-  }
-
-  // Dev fallback
-  if (typeof window === "undefined" || (!window.gtag && !window.clarity)) {
+  if (typeof window !== "undefined") {
+    if (window.gtag) {
+      window.gtag("event", action, { event_category: category, event_label: label });
+    }
+    if (window.clarity) {
+      window.clarity("event", action, { category, label });
+    }
+  } else {
     console.log("Tracking Event:", action, category, label);
   }
 };
 
 function MusicBanner() {
+  // 🔹 Countdown initial state
   const [time, setTime] = useState({
     days: 1,
     hours: 5,
@@ -33,6 +23,7 @@ function MusicBanner() {
     seconds: 45,
   });
 
+  // 🔹 Countdown timer logic
   useEffect(() => {
     const timer = setInterval(() => {
       setTime((prev) => {
@@ -54,7 +45,6 @@ function MusicBanner() {
           seconds = 59;
         } else {
           clearInterval(timer);
-          // 🔹 Countdown finished
           trackEvent("countdown_end", "Music Banner", "Countdown finished");
           return prev;
         }
@@ -68,7 +58,7 @@ function MusicBanner() {
 
   const format = (num) => String(num).padStart(2, "0");
 
-  // 🔹 "Buy Now" button click tracker
+  // 🔹 Buy Now click handler
   const handleBuyNowClick = () => {
     trackEvent("buy_now_click", "Music Banner", "User clicked Buy Now button");
   };

@@ -1,106 +1,132 @@
+// ✅ src/context/WishlistContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import axios from "axios";
-
-// ✅ GA4 + Clarity imports
-import { trackEvent } from "../analytics/ga4";
-import { trackClarityEvent } from "../analytics/clarity";
+import { trackEvent } from "../analytics/ga4"; // GA4
+import { trackClarityEvent } from "../analytics/clarity"; // Clarity
 
 const WishlistContext = createContext();
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function WishlistProvider({ children }) {
   const { user } = useAuth();
   const [wishlist, setWishlist] = useState([]);
 
-  // 🔄 Load wishlist from backend or localStorage fallback
+  // 🔹 Load wishlist safely from localStorage
   useEffect(() => {
-    const fetchWishlist = async () => {
-      if (!user) return setWishlist([]);
-
-      try {
-        const res = await axios.get(`${BASE_URL}/api/wishlist/${user.uid || user.email}`);
-        if (Array.isArray(res.data)) {
-          setWishlist(res.data);
-        } else {
-          setWishlist([]);
-        }
-      } catch (err) {
-        console.warn("⚠️ Backend wishlist unavailable, using local fallback:", err);
-        const saved = localStorage.getItem(`wishlist_${user.uid || user.email}`);
-        setWishlist(saved ? JSON.parse(saved) : []);
-      }
-    };
-    fetchWishlist();
+    if (!user) {
+      setWishlist([]);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(`wishlist_${user.uid || user.email}`);
+      setWishlist(saved ? JSON.parse(saved) : []);
+    } catch {
+      setWishlist([]);
+    }
   }, [user]);
 
-  // 🧠 Auto-save wishlist to backend + localStorage (debounced)
+  // 🔹 Save wishlist with debounce
   useEffect(() => {
     if (!user) return;
-
-    localStorage.setItem(`wishlist_${user.uid || user.email}`, JSON.stringify(wishlist));
-
-    const timeout = setTimeout(async () => {
+    const timeout = setTimeout(() => {
       try {
-        await axios.post(`${BASE_URL}/api/wishlist/${user.uid || user.email}`, { wishlist });
-      } catch (err) {
-        console.error("❌ Wishlist sync failed:", err);
-      }
-    }, 1000);
-
+        localStorage.setItem(
+          `wishlist_${user.uid || user.email}`,
+          JSON.stringify(wishlist)
+        );
+      } catch {}
+    }, 300);
     return () => clearTimeout(timeout);
   }, [wishlist, user]);
 
-  // ❤️ Add product to wishlist
+  // 🧠 Safe Google Analytics Event
+  const safeGA4Event = (action, params = {}) => {
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", action, {
+        event_category: params.category || "Wishlist",
+        event_label: params.label || "Unknown Product",
+        value: params.value || 0,
+      });
+    }
+  };
+
+  // 🧠 Safe Microsoft Clarity Event
+  const safeClarityEvent = (eventName, data = {}) => {
+    if (typeof window !== "undefined" && typeof window.clarity === "function") {
+      try {
+        window.clarity("event", eventName, data);
+      } catch {}
+    }
+  };
+
+  // ❤️ Add to wishlist
   const addToWishlist = (product) => {
+    if (!product) return;
+    const uniqueId =
+      product._id || product.id || product.name || Date.now().toString();
+    const productWithId = { ...product, _id: uniqueId };
+
     setWishlist((prev) => {
-      const alreadyExists = prev.find(
-        (item) => (item.id || item._id) === (product.id || product._id)
-      );
-      if (alreadyExists) return prev;
+      if (prev.some((item) => item._id === uniqueId)) return prev;
 
-      // 🎯 GA4 event
-      trackEvent({
+      safeGA4Event("add_to_wishlist", {
         category: "Wishlist",
-        action: "Add",
         label: product.name,
-        value: product.price || 0,
+        value: product.price,
       });
 
-      // 🎯 Clarity event
-      trackClarityEvent("AddToWishlist", {
-        productId: product.id || product._id,
+      safeClarityEvent("Wishlist_Add", {
+        productId: uniqueId,
         productName: product.name,
-        price: product.price || 0,
+        price: product.price,
       });
 
-      return [...prev, product];
+      return [...prev, productWithId];
     });
   };
 
-  // ❌ Remove product from wishlist
+  // 💔 Remove from wishlist
   const removeFromWishlist = (productId) => {
-    setWishlist((prev) => {
-      const updated = prev.filter(
-        (item) => (item.id || item._id) !== productId
-      );
+    if (!productId) return;
 
-      // 🎯 GA4 event
-      trackEvent({
+    setWishlist((prev) => {
+      const removed = prev.find((item) => item._id === productId);
+      const updated = prev.filter((item) => item._id !== productId);
+
+      safeGA4Event("remove_from_wishlist", {
         category: "Wishlist",
-        action: "Remove",
-        label: productId,
+        label: removed?.name || "Unknown",
       });
 
-      // 🎯 Clarity event
-      trackClarityEvent("RemoveFromWishlist", { productId });
+      safeClarityEvent("Wishlist_Remove", {
+        productId,
+        productName: removed?.name || "Unknown",
+      });
 
       return updated;
     });
   };
 
+  // 🔁 Toggle wishlist
+  const toggleWishlist = (product) => {
+    const uniqueId =
+      product._id || product.id || product.name || Date.now().toString();
+    const exists = wishlist.some((item) => item._id === uniqueId);
+    if (exists) {
+      removeFromWishlist(uniqueId);
+    } else {
+      addToWishlist(product);
+    }
+  };
+
   return (
-    <WishlistContext.Provider value={{ wishlist, addToWishlist, removeFromWishlist }}>
+    <WishlistContext.Provider
+      value={{
+        wishlist,
+        addToWishlist,
+        removeFromWishlist,
+        toggleWishlist,
+      }}
+    >
       {children}
     </WishlistContext.Provider>
   );

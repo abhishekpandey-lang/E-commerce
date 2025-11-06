@@ -1,28 +1,46 @@
 import React from "react";
 import ReactGA from "react-ga4";
+import { useNavigate } from "react-router-dom";
 
 function Banner() {
+  const navigate = useNavigate();
   const productName = "iPhone 14 Series"; // 🔹 Track करने के लिए product name
+
+  // Safe GA4 Event
+  const safeGA4Event = (data) => {
+    if (typeof ReactGA.event === "function") {
+      ReactGA.event(data);
+      console.log("GA4 Event fired:", data);
+    }
+  };
+
+  // Safe Clarity Event
+  const safeClarityEvent = (eventName, data) => {
+    if (typeof window !== "undefined" && typeof window.clarity === "function") {
+      window.clarity("event", eventName, data);
+      console.log("Clarity Event fired:", eventName, data);
+    }
+  };
 
   // जब user "Shop Now" बटन दबाएगा
   const handleShopNowClick = () => {
-    // 🔹 Google Analytics Event
-    ReactGA.event({
+    // 🔹 Track GA4
+    safeGA4Event({
       category: "Banner Interaction",
       action: "Clicked Shop Now",
       label: productName,
-      value: 1, // Optional
+      value: 1,
     });
 
-    // 🔹 Microsoft Clarity Event
-    if (window.clarity) {
-      window.clarity("event", "Banner_Click_ShopNow", { product_name: productName });
-    }
+    // 🔹 Track Clarity
+    safeClarityEvent("Banner_Click_ShopNow", { product_name: productName });
 
     console.log(`User clicked Shop Now for: ${productName}`);
 
-    // Optional: Redirect
-    // window.location.href = "/products/iphone14";
+    // Optional: Redirect after short delay to ensure events fire
+    setTimeout(() => {
+      navigate("/products/iphone14");
+    }, 200); // 200ms delay
   };
 
   return (

@@ -28,6 +28,9 @@ import CancelledOrdersPage from "./pages/CancelledOrdersPage";
 import ReturnPage from "./pages/ReturnPage";
 import MyPaymentPage from "./pages/MyPaymentPage";
 
+// ✅ New CategoryPage for BrowseByCategory
+import CategoryPage from "./pages/CategoryPage";
+
 function App() {
   const theme = useSelector(selectTheme);
 
@@ -62,12 +65,12 @@ function App() {
         <Route path="/cancelledorders" element={<CancelledOrdersPage />} />
         <Route path="/return" element={<ReturnPage />} />
         <Route path="/mypayments" element={<MyPaymentPage />} />
+
+        {/*  New route for BrowseByCategory */}
+        <Route path="/category/:slug" element={<CategoryPage />} />
       </Routes>
     </>
   );
 }
-
-// 🧩 Example usage for custom events
-// onClick={() => trackEvent({ category: "Button", action: "click", label: "Buy Now" })}
 
 export default App;
